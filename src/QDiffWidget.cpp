@@ -63,6 +63,16 @@ void QDiffWidget::setRightLabel(const QString &rightlabel)
     m_rightLabel = rightlabel;
 }
 
+bool QDiffWidget::compareFiles(const QString &leftFile, const QString &rightFile)
+{
+ // TODO: implement the file comparision function (algorythme manager required)
+}
+
+bool QDiffWidget::compareStreams(QTextStream *leftStream, QTextStream *rightStream)
+{
+    // TODO: implement the StreamCoparison logique (algorythme manager required)
+}
+
 // -----------------Content Management :---------------------
 
 void QDiffWidget::resetLeftContent()
