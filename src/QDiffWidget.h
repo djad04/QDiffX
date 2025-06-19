@@ -55,6 +55,9 @@ public:
     void resetRightContent();
     void resetAll();
 
+signals:
+    void contentChanged();
+
 private:
     void setupUI();
     void updateDiff();

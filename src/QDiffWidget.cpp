@@ -37,12 +37,14 @@ void QDiffWidget::setLeftContent(const QString &leftContent)
 {
     m_leftContent = leftContent ;
     m_leftTextBrowser ->setPlainText(m_leftContent);
+    emit contentChanged();
 }
 
 void QDiffWidget::setRightContent(const QString &rightContent)
 {
     m_rightContent = rightContent ;
     m_rightTextBrowser ->setPlainText(m_rightContent);
+    emit contentChanged();
 }
 
 void QDiffWidget::setContent(const QString &leftContent, const QString &rightContent)
@@ -51,6 +53,8 @@ void QDiffWidget::setContent(const QString &leftContent, const QString &rightCon
     m_rightContent = rightContent ;
     m_leftTextBrowser ->setPlainText(m_leftContent);
     m_rightTextBrowser ->setPlainText(m_rightContent);
+
+    emit contentChanged();
 }
 // -----------Labels ------------
 
@@ -102,17 +106,26 @@ QString QDiffWidget::errorMessage(CompareResult result) const
 void QDiffWidget::resetLeftContent()
 {
     setLeftContent({});
+    emit contentChanged();
 }
 
 void QDiffWidget::resetRightContent()
 {
     setRightContent({});
+    emit contentChanged();
 }
 
 void QDiffWidget::resetAll()
 {
+    bool wasBlocked = signalsBlocked();
+    blockSignals(true);
+
     resetLeftContent();
     resetRightContent();
+
+    blockSignals(wasBlocked);
+
+    emit contentChanged();
 }
 
 QString QDiffWidget::rightContent() const
