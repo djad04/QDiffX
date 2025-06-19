@@ -52,6 +52,16 @@ void QDiffWidget::setContent(const QString &leftContent, const QString &rightCon
     m_leftTextBrowser ->setPlainText(m_leftContent);
     m_rightTextBrowser ->setPlainText(m_rightContent);
 }
+// -----------Labels ------------
+
+void QDiffWidget::setLeftLabel(const QString &leftlabel)
+{
+    m_leftLabel = leftlabel;
+}
+void QDiffWidget::setRightLabel(const QString &rightlabel)
+{
+    m_rightLabel = rightlabel;
+}
 
 // -----------------Content Management :---------------------
 

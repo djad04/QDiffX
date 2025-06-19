@@ -10,6 +10,10 @@ class QDiffWidget : public QWidget
     Q_OBJECT
 
 public:
+    enum class DisplayMode{
+        SideBySide,
+        Inline
+    };
     explicit QDiffWidget(QWidget *parent = nullptr,
                 const QString &leftLabelText = "Original",
                 const QString &rightLabelText = "Modified");
@@ -19,6 +23,10 @@ public:
     void setLeftContent(const QString &leftContent);
     void setRightContent(const QString &rightContent);
     void setContent(const QString &leftContent,const QString &rightContent);
+
+    // Labels
+    void setLeftLabel(const QString &leftlabel);
+    void setRightLabel(const QString &rightlabel);
 
     // Content retrieval :
     QString leftContent() const;
