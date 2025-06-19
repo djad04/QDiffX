@@ -14,6 +14,14 @@ public:
         SideBySide,
         Inline
     };
+    enum class CompareResult{
+        Success,
+        LeftFileNotFound,
+        RightFileNotFound,
+        LeftFileReadError,
+        rightFileReadError
+    };
+
     explicit QDiffWidget(QWidget *parent = nullptr,
                 const QString &leftLabelText = "Original",
                 const QString &rightLabelText = "Modified");
@@ -27,6 +35,10 @@ public:
     // Labels
     void setLeftLabel(const QString &leftlabel);
     void setRightLabel(const QString &rightlabel);
+
+    // File Comparison :
+    bool compareFiles(const QString &leftFile, const QString &rightFile);
+    bool compareStreams(QTextStream *leftStream, QTextStream *rightStream);
 
     // Content retrieval :
     QString leftContent() const;
