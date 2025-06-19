@@ -19,7 +19,7 @@ public:
         LeftFileNotFound,
         RightFileNotFound,
         LeftFileReadError,
-        rightFileReadError
+        RightFileReadError
     };
 
     explicit QDiffWidget(QWidget *parent = nullptr,
@@ -39,6 +39,10 @@ public:
     // File Comparison :
     bool compareFiles(const QString &leftFile, const QString &rightFile);
     bool compareStreams(QTextStream *leftStream, QTextStream *rightStream);
+
+    //Error handling :
+    CompareResult lastError() const;
+    QString errorMessage(CompareResult result) const;
 
     // Content retrieval :
     QString leftContent() const;
@@ -65,6 +69,8 @@ private:
     QString m_leftLabel;
     QString m_rightLabel;
 
+    //Error handeling
+    CompareResult m_lastError = CompareResult::Success;
 
 };
 #endif // QDIFFWIDGET_H

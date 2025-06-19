@@ -73,6 +73,30 @@ bool QDiffWidget::compareStreams(QTextStream *leftStream, QTextStream *rightStre
     // TODO: implement the StreamCoparison logique (algorythme manager required)
 }
 
+//- -----------------Error handling: -------------------
+QDiffWidget::CompareResult QDiffWidget::lastError() const
+{
+    return m_lastError;
+}
+
+QString QDiffWidget::errorMessage(CompareResult result) const
+{
+    switch (result) {
+    case CompareResult::Success:
+        return tr("Success");
+    case CompareResult::LeftFileNotFound:
+        return tr("Left file not found");
+    case CompareResult::RightFileNotFound:
+        return tr("Right file not found");
+    case CompareResult::RightFileReadError:
+        return tr("Error reading  the right file");
+    case CompareResult::LeftFileReadError:
+        return tr("Error reading  the right file");
+    default:
+        return tr("Unknown error");
+    }
+}
+
 // -----------------Content Management :---------------------
 
 void QDiffWidget::resetLeftContent()
