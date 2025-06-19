@@ -15,16 +15,25 @@ public:
                 const QString &rightLabelText = "Modified");
     ~QDiffWidget();
 
-    void setLeftContent(const QString leftContent);
-    void setRightContent(const QString rightContent);
+    // Content Setting :
+    void setLeftContent(const QString &leftContent);
+    void setRightContent(const QString &rightContent);
     void setContent(const QString &leftContent,const QString &rightContent);
 
-
+    // Content retrieval :
     QString leftContent() const;
     QString rightContent() const;
+    QString leftLabel() const;
+    QString rightLabel() const;
+
+    // Content Management :
     void resetLeftContent();
     void resetRightContent();
     void resetAll();
+
+private:
+    void setupUI();
+    void updateDiff();
 
 private:
     QSplitter *m_splitter;
@@ -33,6 +42,9 @@ private:
 
     QString m_leftContent;
     QString m_rightContent;
+    QString m_leftLabel;
+    QString m_rightLabel;
+
 
 };
 #endif // QDIFFWIDGET_H

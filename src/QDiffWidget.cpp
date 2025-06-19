@@ -4,13 +4,22 @@
 #include <QLabel>
 
 QDiffWidget::QDiffWidget(QWidget *parent, const QString &leftLabelText, const QString &rightLabelText)
-    : QWidget(parent)
+    : QWidget(parent),
+    m_leftLabel(leftLabelText),
+    m_rightLabel(rightLabelText)
+{
+    setupUI();
+}
+
+QDiffWidget::~QDiffWidget() {}
+
+void QDiffWidget::setupUI()
 {
     QVBoxLayout *mainLayout = new QVBoxLayout(this);
 
     QHBoxLayout *headerLayout = new QHBoxLayout(this);
-    QLabel *leftLabel = new QLabel(leftLabelText, this);
-    QLabel *rightLabel = new QLabel(rightLabelText, this);
+    QLabel *leftLabel = new QLabel(m_leftLabel, this);
+    QLabel *rightLabel = new QLabel(m_rightLabel, this);
     headerLayout->addWidget(leftLabel);
     headerLayout->addWidget(rightLabel);
     mainLayout->addLayout(headerLayout);
@@ -20,18 +29,17 @@ QDiffWidget::QDiffWidget(QWidget *parent, const QString &leftLabelText, const QS
     m_rightTextBrowser = new QTextBrowser(m_splitter);
 
     mainLayout->addWidget(m_splitter);
-    setLayout(mainLayout);
 }
 
-QDiffWidget::~QDiffWidget() {}
+// ---------------Content Setting----------------------
 
-void QDiffWidget::setLeftContent(const QString leftContent)
+void QDiffWidget::setLeftContent(const QString &leftContent)
 {
     m_leftContent = leftContent ;
     m_leftTextBrowser ->setPlainText(m_leftContent);
 }
 
-void QDiffWidget::setRightContent(const QString rightContent)
+void QDiffWidget::setRightContent(const QString &rightContent)
 {
     m_rightContent = rightContent ;
     m_rightTextBrowser ->setPlainText(m_rightContent);
@@ -45,6 +53,7 @@ void QDiffWidget::setContent(const QString &leftContent, const QString &rightCon
     m_rightTextBrowser ->setPlainText(m_rightContent);
 }
 
+// -----------------Content Management :---------------------
 
 void QDiffWidget::resetLeftContent()
 {
@@ -61,6 +70,7 @@ void QDiffWidget::resetAll()
     resetLeftContent();
     resetRightContent();
 }
+
 QString QDiffWidget::rightContent() const
 {
     return m_rightContent;
