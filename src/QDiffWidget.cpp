@@ -2,6 +2,9 @@
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QLabel>
+#include <QFile>
+#include <QTextStream>
+#include <QFileInfo>
 
 QDiffWidget::QDiffWidget(QWidget *parent, const QString &leftLabelText, const QString &rightLabelText)
     : QWidget(parent),
@@ -37,12 +40,14 @@ void QDiffWidget::setLeftContent(const QString &leftContent)
 {
     m_leftContent = leftContent ;
     m_leftTextBrowser ->setPlainText(m_leftContent);
+    emit contentChanged();
 }
 
 void QDiffWidget::setRightContent(const QString &rightContent)
 {
     m_rightContent = rightContent ;
     m_rightTextBrowser ->setPlainText(m_rightContent);
+    emit contentChanged();
 }
 
 void QDiffWidget::setContent(const QString &leftContent, const QString &rightContent)
@@ -51,6 +56,8 @@ void QDiffWidget::setContent(const QString &leftContent, const QString &rightCon
     m_rightContent = rightContent ;
     m_leftTextBrowser ->setPlainText(m_leftContent);
     m_rightTextBrowser ->setPlainText(m_rightContent);
+
+    emit contentChanged();
 }
 // -----------Labels ------------
 
@@ -61,6 +68,80 @@ void QDiffWidget::setLeftLabel(const QString &leftlabel)
 void QDiffWidget::setRightLabel(const QString &rightlabel)
 {
     m_rightLabel = rightlabel;
+}
+
+// ------------------- file operation : ---------------------------
+
+bool QDiffWidget::setLeftContentFromFile(const QString &path)
+{
+    FileOperationResult result;
+    QString content = readFileToQString(path, result);
+
+    if (result != FileOperationResult::Success) {
+        // Set appropriate error for left file
+        if (result == FileOperationResult::LeftFileNotFound) {
+            m_lastError = FileOperationResult::LeftFileNotFound;
+        } else {
+            m_lastError = FileOperationResult::LeftFileReadError;
+        }
+        return false;
+    }
+
+    setLeftContent(content);
+    m_lastError = FileOperationResult::Success;
+    return true;
+}
+
+bool QDiffWidget::setRightContentFromFile(const QString &path)
+{
+    FileOperationResult result;
+    QString content = readFileToQString(path, result);
+
+    if (result != FileOperationResult::Success) {
+        // Set appropriate error for right file
+        if (result == FileOperationResult::LeftFileNotFound) {
+            m_lastError = FileOperationResult::RightFileNotFound;
+        } else {
+            m_lastError = FileOperationResult::RightFileReadError;
+        }
+        return false;
+    }
+
+    setRightContent(content);
+    m_lastError = FileOperationResult::Success;
+    return true;
+}
+
+bool QDiffWidget::setContentFromFiles(const QString &leftPath, const QString &rightPath)
+{
+    FileOperationResult leftResult, rightResult;
+    QString leftContent = readFileToQString(leftPath, leftResult);
+    QString rightContent = readFileToQString(rightPath, rightResult);
+
+    // Check for errors in left file
+    if (leftResult != FileOperationResult::Success) {
+        if (leftResult == FileOperationResult::LeftFileNotFound) {
+            m_lastError = FileOperationResult::LeftFileNotFound;
+        } else {
+            m_lastError = FileOperationResult::LeftFileReadError;
+        }
+        return false;
+    }
+
+    // Check for errors in right file
+    if (rightResult != FileOperationResult::Success) {
+        if (rightResult == FileOperationResult::LeftFileNotFound) {
+            m_lastError = FileOperationResult::RightFileNotFound;
+        } else {
+            m_lastError = FileOperationResult::RightFileReadError;
+        }
+        return false;
+    }
+
+    // Both files read successfully
+    setContent(leftContent, rightContent);
+    m_lastError = FileOperationResult::Success;
+    return true;
 }
 
 bool QDiffWidget::compareFiles(const QString &leftFile, const QString &rightFile)
@@ -74,23 +155,23 @@ bool QDiffWidget::compareStreams(QTextStream *leftStream, QTextStream *rightStre
 }
 
 //- -----------------Error handling: -------------------
-QDiffWidget::CompareResult QDiffWidget::lastError() const
+QDiffWidget::FileOperationResult QDiffWidget::lastError() const
 {
     return m_lastError;
 }
 
-QString QDiffWidget::errorMessage(CompareResult result) const
+QString QDiffWidget::errorMessage(FileOperationResult result) const
 {
     switch (result) {
-    case CompareResult::Success:
+    case FileOperationResult::Success:
         return tr("Success");
-    case CompareResult::LeftFileNotFound:
+    case FileOperationResult::LeftFileNotFound:
         return tr("Left file not found");
-    case CompareResult::RightFileNotFound:
+    case FileOperationResult::RightFileNotFound:
         return tr("Right file not found");
-    case CompareResult::RightFileReadError:
+    case FileOperationResult::RightFileReadError:
         return tr("Error reading  the right file");
-    case CompareResult::LeftFileReadError:
+    case FileOperationResult::LeftFileReadError:
         return tr("Error reading  the right file");
     default:
         return tr("Unknown error");
@@ -102,17 +183,26 @@ QString QDiffWidget::errorMessage(CompareResult result) const
 void QDiffWidget::resetLeftContent()
 {
     setLeftContent({});
+    emit contentChanged();
 }
 
 void QDiffWidget::resetRightContent()
 {
     setRightContent({});
+    emit contentChanged();
 }
 
 void QDiffWidget::resetAll()
 {
+    bool wasBlocked = signalsBlocked();
+    blockSignals(true);
+
     resetLeftContent();
     resetRightContent();
+
+    blockSignals(wasBlocked);
+
+    emit contentChanged();
 }
 
 QString QDiffWidget::rightContent() const
@@ -123,4 +213,41 @@ QString QDiffWidget::rightContent() const
 QString QDiffWidget::leftContent() const
 {
     return m_leftContent;
+}
+
+// -----------------Helper Functions---------------------
+
+QString QDiffWidget::readFileToQString(const QString &filePath, FileOperationResult &result)
+{
+    result = FileOperationResult::Success;
+
+
+    QFileInfo fileInfo(filePath);
+    if (!fileInfo.exists()) {
+        result = FileOperationResult::LeftFileNotFound; // Will be overridden by caller for right file
+        return QString();
+    }
+
+    if (!fileInfo.isReadable()) {
+        result = FileOperationResult::LeftFileReadError; // Will be overridden by caller for right file
+        return QString();
+    }
+
+    QFile file(filePath);
+    if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
+        result = FileOperationResult::LeftFileReadError; // Will be overridden by caller for right file
+        return QString();
+    }
+
+    QTextStream stream(&file);
+    stream.setEncoding(QStringConverter::Utf8);
+
+    QString content = stream.readAll();
+
+    if (stream.status() != QTextStream::Ok) {
+        result = FileOperationResult::LeftFileReadError; // Will be overridden by caller for right file
+        return QString();
+    }
+
+    return content;
 }
