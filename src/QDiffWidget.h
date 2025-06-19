@@ -14,7 +14,7 @@ public:
         SideBySide,
         Inline
     };
-    enum class CompareResult{
+    enum class FileOperationResult{
         Success,
         LeftFileNotFound,
         RightFileNotFound,
@@ -32,6 +32,11 @@ public:
     void setRightContent(const QString &rightContent);
     void setContent(const QString &leftContent,const QString &rightContent);
 
+    // File Content Setting :
+    bool setLeftContentFromFile(const QString &path);
+    bool setRightContentFromFile(const QString &path);
+    bool setContentFromFiles(const QString &leftPath, const QString &rightPath);
+
     // Labels
     void setLeftLabel(const QString &leftlabel);
     void setRightLabel(const QString &rightlabel);
@@ -41,8 +46,8 @@ public:
     bool compareStreams(QTextStream *leftStream, QTextStream *rightStream);
 
     //Error handling :
-    CompareResult lastError() const;
-    QString errorMessage(CompareResult result) const;
+    FileOperationResult lastError() const;
+    QString errorMessage(FileOperationResult result) const;
 
     // Content retrieval :
     QString leftContent() const;
@@ -55,9 +60,13 @@ public:
     void resetRightContent();
     void resetAll();
 
+signals:
+    void contentChanged();
+
 private:
     void setupUI();
     void updateDiff();
+    QString readFileToQString(const QString &filePath, FileOperationResult &result);
 
 private:
     QSplitter *m_splitter;
@@ -70,7 +79,7 @@ private:
     QString m_rightLabel;
 
     //Error handeling
-    CompareResult m_lastError = CompareResult::Success;
+    FileOperationResult m_lastError = FileOperationResult::Success;
 
 };
 #endif // QDIFFWIDGET_H
