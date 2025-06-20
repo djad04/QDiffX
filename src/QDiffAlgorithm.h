@@ -53,9 +53,34 @@ private:
     QString m_errorMessage;
     QMap<QString, QVariant> m_metaData;
 };
+struct AlgorithmCapabilities {
+    bool supportsLargeFiles;
+    bool supportsUnicode;
+    bool supportsBinary;
+    bool supportsLineByLine;
+    bool supportsCharByChar;
+    bool supportsWordByWord;
+    int maxRecommendedSize;
+    QString description;
+
+    AlgorithmCapabilities()
+        : supportsLargeFiles(false), supportsUnicode(true), supportsBinary(false),
+        supportsLineByLine(true), supportsCharByChar(false), supportsWordByWord(false),
+        maxRecommendedSize(1024*1024) {} // 1MB
+};
 
 class DiffAlgorithm{
-   virtual ~DiffAlgorithm() = default;
+    virtual ~DiffAlgorithm() = default;
+
+    virtual QDiffResult calculateDiff(QString &leftFile, QString &rightFile) = 0;
+
+    // Algorithm Info:
+    virtual QString getName() = 0;
+    virtual QString getDescription() const = 0;
+
+
+private:
+    QMap<QString, QVariant> m_config;
 
 };
 
