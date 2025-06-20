@@ -41,10 +41,6 @@ public:
     void setLeftLabel(const QString &leftlabel);
     void setRightLabel(const QString &rightlabel);
 
-    // File Comparison :
-    bool compareFiles(const QString &leftFile, const QString &rightFile);
-    bool compareStreams(QTextStream *leftStream, QTextStream *rightStream);
-
     //Error handling :
     FileOperationResult lastError() const;
     QString errorMessage(FileOperationResult result) const;
@@ -66,6 +62,9 @@ signals:
 private:
     void setupUI();
     void updateDiff();
+    void setupConnections();
+
+    // Helper Functions
     QString readFileToQString(const QString &filePath, FileOperationResult &result);
 
 private:
@@ -78,7 +77,7 @@ private:
     QString m_leftLabel;
     QString m_rightLabel;
 
-    //Error handeling
+    // Error Handeling
     FileOperationResult m_lastError = FileOperationResult::Success;
 
 };

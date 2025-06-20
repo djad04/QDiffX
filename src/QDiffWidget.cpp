@@ -12,6 +12,7 @@ QDiffWidget::QDiffWidget(QWidget *parent, const QString &leftLabelText, const QS
     m_rightLabel(rightLabelText)
 {
     setupUI();
+    setupConnections();
 }
 
 QDiffWidget::~QDiffWidget() {}
@@ -32,6 +33,16 @@ void QDiffWidget::setupUI()
     m_rightTextBrowser = new QTextBrowser(m_splitter);
 
     mainLayout->addWidget(m_splitter);
+}
+
+void QDiffWidget::updateDiff()
+{
+// TODO: implement the definition (requires the algorythme manager)
+}
+
+void QDiffWidget::setupConnections()
+{
+// NOTE: all signal connections here
 }
 
 // ---------------Content Setting----------------------
@@ -138,20 +149,10 @@ bool QDiffWidget::setContentFromFiles(const QString &leftPath, const QString &ri
         return false;
     }
 
-    // Both files read successfully
+
     setContent(leftContent, rightContent);
     m_lastError = FileOperationResult::Success;
     return true;
-}
-
-bool QDiffWidget::compareFiles(const QString &leftFile, const QString &rightFile)
-{
- // TODO: implement the file comparision function (algorythme manager required)
-}
-
-bool QDiffWidget::compareStreams(QTextStream *leftStream, QTextStream *rightStream)
-{
-    // TODO: implement the StreamCoparison logique (algorythme manager required)
 }
 
 //- -----------------Error handling: -------------------
@@ -183,13 +184,13 @@ QString QDiffWidget::errorMessage(FileOperationResult result) const
 void QDiffWidget::resetLeftContent()
 {
     setLeftContent({});
-    emit contentChanged();
+    // contentChanged() already emitted by setLeftContent()
 }
 
 void QDiffWidget::resetRightContent()
 {
     setRightContent({});
-    emit contentChanged();
+    // contentChanged() already emitted by setRightContent()
 }
 
 void QDiffWidget::resetAll()
@@ -208,6 +209,15 @@ void QDiffWidget::resetAll()
 QString QDiffWidget::rightContent() const
 {
     return m_rightContent;
+}
+
+QString QDiffWidget::leftLabel() const
+{
+    return m_leftLabel;
+}
+QString QDiffWidget::rightLabel() const
+{
+    return m_rightLabel;
 }
 
 QString QDiffWidget::leftContent() const
