@@ -72,12 +72,13 @@ private:
 
 
 class DiffAlgorithm{
+public:
     virtual ~DiffAlgorithm() = default;
 
-    virtual QDiffResult calculateDiff(QString &leftFile, QString &rightFile) = 0;
+    virtual QDiffResult calculateDiff(const QString &leftFile, const QString &rightFile) = 0;
 
     // Algorithm Info:
-    virtual QString getName() = 0;
+    virtual QString getName() const = 0;
     virtual QString getDescription() const = 0;
 
 
