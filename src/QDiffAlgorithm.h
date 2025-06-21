@@ -60,7 +60,7 @@ public:
     void setErrorMessage(const QString &newErrorMessage) { m_errorMessage = newErrorMessage; }
 
     QMap<QString, QVariant> allMetaData() const { return m_metaData; }
-    QVariant metaData(QString &Key) const { return m_metaData.value(Key); }
+    QVariant metaData(const QString &Key) const { return m_metaData.value(Key); }
     void setMetaData(const QMap<QString, QVariant> &newMetaData) { m_metaData = newMetaData; }
 
 private:
