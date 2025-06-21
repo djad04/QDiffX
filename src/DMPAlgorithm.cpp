@@ -56,6 +56,51 @@ AlgorithmCapabilities DMPAlgorithm::getCapabilities() const
     return caps;
 }
 
+void DMPAlgorithm::setConfiguration(const QMap<QString, QVariant> &newConfig)
+{
+    QDiffAlgorithm::setConfiguration(newConfig);
+
+    // Apply DMP-specific configuration
+    if (newConfig.contains(CONFIG_TIMEOUT)) {
+        m_dmp.Diff_Timeout = newConfig[CONFIG_TIMEOUT].toFloat();
+    }
+    if (newConfig.contains(CONFIG_EDIT_COST)) {
+        m_dmp.Diff_EditCost = newConfig[CONFIG_EDIT_COST].toInt();
+    }
+    if (newConfig.contains(CONFIG_MATCH_THRESHOLD)) {
+        m_dmp.Match_Threshold = newConfig[CONFIG_MATCH_THRESHOLD].toFloat();
+    }
+    if (newConfig.contains(CONFIG_MATCH_DISTANCE)) {
+        m_dmp.Match_Distance = newConfig[CONFIG_MATCH_DISTANCE].toInt();
+    }
+    if (newConfig.contains(CONFIG_PATCH_DELETE_THRESHOLD)) {
+        m_dmp.Patch_DeleteThreshold = newConfig[CONFIG_PATCH_DELETE_THRESHOLD].toFloat();
+    }
+    if (newConfig.contains(CONFIG_PATCH_MARGIN)) {
+        m_dmp.Patch_Margin = newConfig[CONFIG_PATCH_MARGIN].toInt();
+    }
+    if (newConfig.contains(CONFIG_MATCH_MAX_BITS)) {
+        m_dmp.Match_MaxBits = newConfig[CONFIG_MATCH_MAX_BITS].toInt();
+    }
+    if (newConfig.contains(CONFIG_CHECK_LINES)) {
+        m_checkLines = newConfig[CONFIG_CHECK_LINES].toBool();
+    }
+
+}
+
+QStringList DMPAlgorithm::getConfigurationKeys() const {
+    return {
+        CONFIG_TIMEOUT,
+        CONFIG_EDIT_COST,
+        CONFIG_MATCH_THRESHOLD,
+        CONFIG_MATCH_DISTANCE,
+        CONFIG_PATCH_DELETE_THRESHOLD,
+        CONFIG_PATCH_MARGIN,
+        CONFIG_MATCH_MAX_BITS,
+        CONFIG_CHECK_LINES
+    };
+}
+
 DiffOperation DMPAlgorithm::convertOperation(Operation dmpOp) const
 {
     switch (dmpOp) {
