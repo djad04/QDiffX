@@ -16,6 +16,13 @@ enum class DiffOperation{
     Replace
 };
 
+enum class DiffMode {
+    Auto,           // Let algorithm decide
+    LineByLine,     // Request line-based diff
+    CharByChar,     // Request character-based diff
+    WordByWord      // Request word-based diff
+};
+
 struct DiffChange{
     DiffOperation operation;
     QString text;
@@ -75,7 +82,7 @@ class QDiffAlgorithm{
 public:
     virtual ~QDiffAlgorithm() = default;
 
-    virtual QDiffResult calculateDiff(const QString &leftFile, const QString &rightFile) = 0;
+    virtual QDiffResult calculateDiff(const QString &leftFile, const QString &rightFile, DiffMode mode = DiffMode::Auto) = 0;
 
     // Algorithm Info:
     virtual QString getName() const = 0;
