@@ -28,6 +28,7 @@ if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
         src/DMP/diff_match_patch.h
         src/DMP/diff_match_patch.cpp
         src/dtl/Diff.hpp src/dtl/Diff3.hpp src/dtl/dtl.hpp src/dtl/functors.hpp src/dtl/Lcs.hpp src/dtl/Sequence.hpp src/dtl/Ses.hpp src/dtl/variables.hpp
+        src/QDiffAlgorithm.h
 
     )
 # Define target properties for Android with Qt 6 as:
