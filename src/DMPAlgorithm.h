@@ -1,6 +1,7 @@
 #ifndef DMPALGORITHM_H
 #define DMPALGORITHM_H
 #include "QDiffAlgorithm.h"
+#include "DMP/diff_match_patch.h"
 
 namespace QDiffX{
 
@@ -13,7 +14,7 @@ public:
 
 
     // QDiffAlgorithm interface Implementation
-    QDiffResult calculateDiff(const QString &leftFile, const QString &rightFile) override;
+    QDiffResult calculateDiff(const QString &leftFile, const QString &rightFile, DiffMode = DiffMode::Auto) override;
 
     QString getName() const override { return "Diff-Match-Patch-GoogleAlgorithme-Modernized"; }
     QString getDescription() const override {
@@ -31,6 +32,15 @@ public:
     bool isRecommendedFor(const QString &leftText, const QString &rightText) const override;
 
 private:
+    DiffOperation convertOperation(Operation dmpOp) const;
+    QList<DiffChange> convertDiffList(const QList<Diff>& dmpDiffs) const;
+    void calculateLineNumbers(QList<DiffChange> &changes,const QString &leftFile,const QString rightFile) const;
+
+private:
+
+    // DMP Engine:
+    diff_match_patch m_dmp;
+    bool m_checkLines;
 
     // Configuration keys
     static const QString CONFIG_TIMEOUT;
