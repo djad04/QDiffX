@@ -29,6 +29,22 @@ struct DiffChange{
         :operation(op), text(txt), lineNumber(line), position(pos) {}
 };
 
+struct AlgorithmCapabilities {
+    bool supportsLargeFiles;
+    bool supportsUnicode;
+    bool supportsBinary;
+    bool supportsLineByLine;
+    bool supportsCharByChar;
+    bool supportsWordByWord;
+    int maxRecommendedSize;
+    QString description;
+
+    AlgorithmCapabilities()
+        : supportsLargeFiles(false), supportsUnicode(true), supportsBinary(false),
+        supportsLineByLine(true), supportsCharByChar(false), supportsWordByWord(false),
+        maxRecommendedSize(1024*1024) {} // 1MB
+};
+
 class QDiffResult{
 public:
     QDiffResult() : m_success(false) {}
@@ -53,21 +69,7 @@ private:
     QString m_errorMessage;
     QMap<QString, QVariant> m_metaData;
 };
-struct AlgorithmCapabilities {
-    bool supportsLargeFiles;
-    bool supportsUnicode;
-    bool supportsBinary;
-    bool supportsLineByLine;
-    bool supportsCharByChar;
-    bool supportsWordByWord;
-    int maxRecommendedSize;
-    QString description;
 
-    AlgorithmCapabilities()
-        : supportsLargeFiles(false), supportsUnicode(true), supportsBinary(false),
-        supportsLineByLine(true), supportsCharByChar(false), supportsWordByWord(false),
-        maxRecommendedSize(1024*1024) {} // 1MB
-};
 
 class DiffAlgorithm{
     virtual ~DiffAlgorithm() = default;
@@ -79,10 +81,22 @@ class DiffAlgorithm{
     virtual QString getDescription() const = 0;
 
 
+    // Algorithme Characteristics:
+    virtual AlgorithmCapabilities getCapabilities() = 0;
+
+    //Algorithme Configuration
+    virtual QMap<QString, QVariant> configuration() const { return m_config; }
+    virtual void setConfiguration(const QMap<QString, QVariant> &newConfig)  { m_config = newConfig; }
+    virtual QStringList getConfigurationKeys() const { return QStringList(); }
+
 private:
     QMap<QString, QVariant> m_config;
 
 };
+
+
+
+
 
 
 
