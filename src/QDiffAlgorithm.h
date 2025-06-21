@@ -93,7 +93,7 @@ public:
     virtual AlgorithmCapabilities getCapabilities() const = 0;
 
     //Algorithme Configuration
-    virtual QMap<QString, QVariant> configuration() const { return m_config; }
+    virtual QMap<QString, QVariant> getConfiguration() const { return m_config; }
     virtual void setConfiguration(const QMap<QString, QVariant> &newConfig)  { m_config = newConfig; }
     virtual QStringList getConfigurationKeys() const { return QStringList(); }
 
@@ -108,27 +108,12 @@ public:
     }
 
 private:
+
+
+private:
     QMap<QString, QVariant> m_config;
 
 };
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 }//namespace QDiffX
