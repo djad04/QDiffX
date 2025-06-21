@@ -71,9 +71,9 @@ private:
 };
 
 
-class DiffAlgorithm{
+class QDiffAlgorithm{
 public:
-    virtual ~DiffAlgorithm() = default;
+    virtual ~QDiffAlgorithm() = default;
 
     virtual QDiffResult calculateDiff(const QString &leftFile, const QString &rightFile) = 0;
 
