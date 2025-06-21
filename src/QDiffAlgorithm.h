@@ -82,12 +82,22 @@ class DiffAlgorithm{
 
 
     // Algorithme Characteristics:
-    virtual AlgorithmCapabilities getCapabilities() = 0;
+    virtual AlgorithmCapabilities getCapabilities() const = 0;
 
     //Algorithme Configuration
     virtual QMap<QString, QVariant> configuration() const { return m_config; }
     virtual void setConfiguration(const QMap<QString, QVariant> &newConfig)  { m_config = newConfig; }
     virtual QStringList getConfigurationKeys() const { return QStringList(); }
+
+    // Performance estimation
+    virtual int estimateComplexity(const QString& leftText, const QString& rightText) const {
+        return leftText.length() + rightText.length();
+    }
+
+    virtual bool isRecommendedFor(const QString& leftText, const QString& rightText) const {
+        int size = leftText.length() + rightText.length();
+        return size <= getCapabilities().maxRecommendedSize;
+    }
 
 private:
     QMap<QString, QVariant> m_config;
