@@ -43,7 +43,6 @@ private:
 
     // DMP Engine:
     diff_match_patch m_dmp;
-    bool m_checkLines;
 
     // Configuration keys
     static const QString CONFIG_TIMEOUT;
@@ -53,7 +52,7 @@ private:
     static const QString CONFIG_PATCH_DELETE_THRESHOLD;
     static const QString CONFIG_PATCH_MARGIN;
     static const QString CONFIG_MATCH_MAX_BITS;
-    static const QString CONFIG_CHECK_LINES;
+
 };
 
 

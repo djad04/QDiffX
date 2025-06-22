@@ -13,7 +13,7 @@ const QString DMPAlgorithm::CONFIG_MATCH_MAX_BITS = "match_max_bits";
 const QString DMPAlgorithm::CONFIG_CHECK_LINES = "check_lines";
 
 
-QDiffX::DMPAlgorithm::DMPAlgorithm() : m_checkLines(true) {
+QDiffX::DMPAlgorithm::DMPAlgorithm() {
     m_dmp.Diff_Timeout = 0.0f;  // No timeout for accuracy
     m_dmp.Diff_EditCost = 4;
     m_dmp.Match_Threshold = 0.5f;
@@ -136,9 +136,6 @@ void DMPAlgorithm::setConfiguration(const QMap<QString, QVariant> &newConfig)
     }
     if (newConfig.contains(CONFIG_MATCH_MAX_BITS)) {
         m_dmp.Match_MaxBits = newConfig[CONFIG_MATCH_MAX_BITS].toInt();
-    }
-    if (newConfig.contains(CONFIG_CHECK_LINES)) {
-        m_checkLines = newConfig[CONFIG_CHECK_LINES].toBool();
     }
 
 }
