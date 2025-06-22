@@ -24,27 +24,76 @@ QDiffX::DMPAlgorithm::DMPAlgorithm() : m_checkLines(true) {
 }
 
 
-QDiffX::QDiffResult QDiffX::DMPAlgorithm::calculateDiff(const QString &leftFile, const QString &rightFile, DiffMode)
+QDiffX::QDiffResult QDiffX::DMPAlgorithm::calculateDiff(const QString &leftFile, const QString &rightFile, DiffMode mode)
 {
     QDiffResult result;
     try {
-        QList<Diff> dmpChanges = m_dmp.diff_main(leftFile, rightFile, m_checkLines);
+        QList<Diff> dmpChanges;
 
-        m_dmp.diff_cleanupSemantic(dmpChanges);
-        m_dmp.diff_cleanupEfficiency(dmpChanges);
+        // Choose diff method based on mode
+        switch (mode) {
+            case DiffMode::LineByLine:
+                dmpChanges = diffLineByLine(leftFile, rightFile);
+                break;
+
+            case DiffMode::CharByChar:
+                dmpChanges = diffCharByChar(leftFile, rightFile);
+                break;
+
+            case DiffMode::Auto:
+            default:
+              dmpChanges = m_dmp.diff_main(leftFile, rightFile);
+                m_dmp.diff_cleanupSemantic(dmpChanges);
+                m_dmp.diff_cleanupEfficiency(dmpChanges);
+                break;
+        }
+
 
         QList<QDiffX::DiffChange> changes = convertDiffList(dmpChanges);
 
+        // Calculate line numbers for the changes
+        calculateLineNumbers(changes, leftFile, rightFile);
+
+        result.setChanges(changes);
+        result.setSuccess(true);
+
+        // Add metadata about the algorithm used
+        QMap<QString, QVariant> metadata;
+        metadata["algorithm"] = "DMP";
+        metadata["mode"] = (mode == DiffMode::LineByLine) ? "line" :
+                          (mode == DiffMode::CharByChar) ? "char" : "auto";
+        metadata["total_changes"] = changes.size();
+        result.setMetaData(metadata);
 
     } catch (...) {
+        result.setSuccess(false);
+        result.setErrorMessage("DMP algorithm failed to calculate diff");
     }
 
     return result;
 }
-QList<Diff> DMPAlgorithm::diffCharByChar(const QString &leftFile, const QString &rightFile) const
+QList<Diff> DMPAlgorithm::diffCharByChar(const QString &leftFile, const QString &rightFile)
 {
-    QList<Diff> dmpChanges = m_dmp.diff_main(leftFile, rightFile, m_checkLines);
+    // checkLines=false for pure character-by-character comparison
+    QList<Diff> diffs = m_dmp.diff_main(leftFile, rightFile, false);
 
+    // Step 2: Apply cleanup for better results
+    m_dmp.diff_cleanupSemantic(diffs);
+    m_dmp.diff_cleanupEfficiency(diffs);
+
+    return diffs;
+}
+
+QList<Diff> DMPAlgorithm::diffLineByLine(const QString &leftFile, const QString &rightFile)
+{
+    // Use DMP's integrated line mode by setting checklines=true
+    QList<Diff> diffs = m_dmp.diff_main(leftFile, rightFile, true);
+
+    // Apply cleanup for better results
+    m_dmp.diff_cleanupSemantic(diffs);
+    m_dmp.diff_cleanupEfficiency(diffs);
+
+    return diffs;
 }
 
 AlgorithmCapabilities DMPAlgorithm::getCapabilities() const
