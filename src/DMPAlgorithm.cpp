@@ -10,7 +10,7 @@ const QString DMPAlgorithm::CONFIG_MATCH_DISTANCE = "match_distance";
 const QString DMPAlgorithm::CONFIG_PATCH_DELETE_THRESHOLD = "patch_delete_threshold";
 const QString DMPAlgorithm::CONFIG_PATCH_MARGIN = "patch_margin";
 const QString DMPAlgorithm::CONFIG_MATCH_MAX_BITS = "match_max_bits";
-const QString DMPAlgorithm::CONFIG_CHECK_LINES = "check_lines";
+
 
 
 QDiffX::DMPAlgorithm::DMPAlgorithm() {
@@ -235,6 +235,20 @@ void DMPAlgorithm::calculateLineNumbers(QList<DiffChange> &changes, const QStrin
             break;}
         }
     }
+}
+
+double DMPAlgorithm::calculateSimilarity(const QList<DiffChange>& changes, const QString& leftText, const QString& rightText) const {
+    int totalChars = std::max(leftText.length(), rightText.length());
+    if (totalChars == 0) return 1.0;
+
+    int equalChars = 0;
+    for (const auto& change : changes) {
+        if (change.operation == DiffOperation::Equal) {
+            equalChars += change.text.length();
+        }
+    }
+
+    return static_cast<double>(equalChars) / totalChars;
 }
 
 }// namespace QDiffX
