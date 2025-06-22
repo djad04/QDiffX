@@ -34,6 +34,7 @@ public:
     int estimateComplexity(const QString &leftText, const QString &rightText) const override;
     bool isRecommendedFor(const QString &leftText, const QString &rightText) const override;
 
+    double calculateSimilarity(const QList<DiffChange> &changes, const QString &leftText, const QString &rightText) const;
 private:
     DiffOperation convertOperation(Operation dmpOp) const;
     QList<DiffChange> convertDiffList(const QList<Diff>& dmpDiffs) const;
