@@ -16,6 +16,9 @@ public:
     // QDiffAlgorithm interface Implementation
     QDiffResult calculateDiff(const QString &leftFile, const QString &rightFile, DiffMode = DiffMode::Auto) override;
 
+    QList<Diff> diffCharByChar(const QString &leftFile, const QString &rightFile);
+    QList<Diff> diffLineByLine(const QString &leftFile, const QString &rightFile);
+
     QString getName() const override { return "Diff-Match-Patch-GoogleAlgorithme-Modernized"; }
     QString getDescription() const override {
         return "Reimplemented Google diff-match-patch,deprecated Qt4 components Replaced and updated to modern C++, optimized performance";
