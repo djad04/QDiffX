@@ -237,4 +237,59 @@ QDiffResult DTLAlgorithm::calculateDiff(const QString &leftFile, const QString &
     return result;
 }
 
+void DTLAlgorithm::calculateLineNumbers(QList<DiffChange> &changes, const QString &leftFile, const QString &rightFile) const
+{
+    int leftLine = 1, rightLine = 1;
+    int leftPos = 0, rightPos = 0;
+
+    for (auto &change : changes) {
+        switch (change.operation) {
+        case DiffOperation::Equal:{
+            change.lineNumber = leftLine;
+            int lineJumps = change.text.count('\n');
+            leftLine += lineJumps;
+            rightLine += lineJumps;
+            leftPos += change.text.length();
+            rightPos += change.text.length();
+            break;}
+
+        case DiffOperation::Delete:
+            change.lineNumber = leftLine;
+            leftLine += change.text.count('\n');
+            leftPos += change.text.length();
+            break;
+
+        case DiffOperation::Insert:
+            change.lineNumber = rightLine;
+            rightLine += change.text.count('\n');
+            rightPos += change.text.length();
+            break;
+
+        case DiffOperation::Replace:{
+            change.lineNumber = leftLine;
+            int replaceLineJumps = change.text.count('\n');
+            leftLine += replaceLineJumps;
+            rightLine += replaceLineJumps;
+            leftPos += change.text.length();
+            rightPos += change.text.length();
+            break;}
+        }
+    }
+}
+
+double DTLAlgorithm::calculateSimilarity(const QList<DiffChange> &changes, const QString &leftText, const QString &rightText) const
+{
+    int totalChars = std::max(leftText.length(), rightText.length());
+    if (totalChars == 0) return 1.0;
+
+    int equalChars = 0;
+    for (const auto &change : changes) {
+        if (change.operation == DiffOperation::Equal) {
+            equalChars += change.text.length();
+        }
+    }
+
+    return static_cast<double>(equalChars) / totalChars;
+}
+
 } // namespace QDiffX
