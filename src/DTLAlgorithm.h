@@ -26,6 +26,26 @@ public:
 
     AlgorithmCapabilities getCapabilities() const override;
 
+    // Algorithm Configuration
+    void setConfiguration(const QMap<QString, QVariant> &newConfig) override;
+    QStringList getConfigurationKeys() const override;
+
+    // Performance
+    int estimateComplexity(const QString &leftText, const QString &rightText) const override;
+    bool isRecommendedFor(const QString &leftText, const QString &rightText) const override;
+
+    double calculateSimilarity(const QList<DiffChange> &changes, const QString &leftText, const QString &rightText) const;
+
+private:
+    // DTL conversion helpers
+    QList<DiffChange> convertDTLSequence(const dtl::Diff<QString> &dtlDiff) const;
+    QList<DiffChange> convertDTLSequenceChar(const dtl::Diff<QChar> &dtlDiff) const;
+    DiffOperation convertDTLOperation(dtl::edit_t dtlOp) const;
+    void calculateLineNumbers(QList<DiffChange> &changes, const QString &leftFile, const QString &rightFile) const;
+
+    // DTL utility methods
+    QStringList splitIntoLines(const QString &text) const;
+    QString joinLines(const QStringList &lines) const;
 
 private:
     // Configuration keys
