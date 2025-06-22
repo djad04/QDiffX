@@ -36,6 +36,69 @@ AlgorithmCapabilities DTLAlgorithm::getCapabilities() const
     return caps;
 }
 
+void DTLAlgorithm::setConfiguration(const QMap<QString, QVariant> &newConfig)
+{
+    QDiffAlgorithm::setConfiguration(newConfig);
 
+    // DTL-specific configuration handling
+    // Configuration is stored in base class and used during diff calculation
+}
+
+QStringList DTLAlgorithm::getConfigurationKeys() const
+{
+    return {
+        CONFIG_LARGE_FILE_THRESHOLD,
+        CONFIG_ENABLE_OPTIMIZATION,
+        CONFIG_MAX_DIFF_SIZE,
+        CONFIG_ENABLE_HEURISTICS
+    };
+}
+
+int DTLAlgorithm::estimateComplexity(const QString &leftText, const QString &rightText) const
+{
+    // TODO: requires Benchmark
+    return 0;
+}
+
+bool DTLAlgorithm::isRecommendedFor(const QString &leftText, const QString &rightText) const
+{
+    // TODO: will be implemented Later
+    return 0;
+}
+
+DiffOperation DTLAlgorithm::convertDTLOperation(dtl::edit_t dtlOp) const
+{
+    switch (dtlOp) {
+    case dtl::SES_ADD:
+        return DiffOperation::Insert;
+    case dtl::SES_DELETE:
+        return DiffOperation::Delete;
+    case dtl::SES_COMMON:
+        return DiffOperation::Equal;
+    default:
+        return DiffOperation::Equal;
+    }
+}
+
+QStringList DTLAlgorithm::splitIntoLines(const QString &text) const
+{
+    if (text.isEmpty()) {
+        return QStringList();
+    }
+
+    QStringList lines = text.split('\n');
+
+    // DTL requires non-empty sequences, so ensure we have at least one element
+    if (lines.isEmpty()) {
+        lines.append(QString());
+    }
+
+    return lines;
+}
+
+QString DTLAlgorithm::joinLines(const QStringList &lines) const
+{
+    return lines.join('\n');
+}
 
 } // namespace QDiffX
