@@ -108,9 +108,6 @@ public:
     }
 
 private:
-
-
-private:
     QMap<QString, QVariant> m_config;
 
 };

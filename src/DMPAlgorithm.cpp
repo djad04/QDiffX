@@ -148,8 +148,7 @@ QStringList DMPAlgorithm::getConfigurationKeys() const {
         CONFIG_MATCH_DISTANCE,
         CONFIG_PATCH_DELETE_THRESHOLD,
         CONFIG_PATCH_MARGIN,
-        CONFIG_MATCH_MAX_BITS,
-        CONFIG_CHECK_LINES
+        CONFIG_MATCH_MAX_BITS
     };
 }
 
