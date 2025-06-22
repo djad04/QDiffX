@@ -143,4 +143,42 @@ QList<DiffChange> DTLAlgorithm::convertDTLSequence(const dtl::Diff<QString> &dtl
     return changes;
 }
 
+QList<DiffChange> DTLAlgorithm::diffCharByChar(const QString &leftFile, const QString &rightFile)
+{
+    // Convert strings to character vectors for DTL
+    std::vector<QChar> leftChars(leftFile.begin(), leftFile.end());
+    std::vector<QChar> rightChars(rightFile.begin(), rightFile.end());
+
+    // Create DTL diff object and calculate differences
+    dtl::Diff<QChar> dtlDiff(leftChars, rightChars);
+    dtlDiff.compose();
+
+    // Convert DTL result to QDiffX format
+    return convertDTLSequenceChar(dtlDiff);
+}
+
+QList<DiffChange> DTLAlgorithm::convertDTLSequenceChar(const dtl::Diff<QChar> &dtlDiff) const
+{
+    QList<DiffChange> changes;
+    auto ses = dtlDiff.getSes();
+    int position = 0;
+
+    for (const auto &edit : ses.getSequence()) {
+        DiffChange change;
+        change.operation = convertDTLOperation(edit.second.type);
+        change.text = QString(edit.first); // Convert QChar to QString
+        change.lineNumber = -1; // Will be calculated later
+        change.position = position;
+
+        changes.append(change);
+
+        // Update position (don't advance for deletions)
+        if (edit.second.type != dtl::SES_DELETE) {
+            position += change.text.length();
+        }
+    }
+
+    return changes;
+}
+
 } // namespace QDiffX
