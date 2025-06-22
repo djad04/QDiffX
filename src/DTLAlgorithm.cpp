@@ -101,4 +101,46 @@ QString DTLAlgorithm::joinLines(const QStringList &lines) const
     return lines.join('\n');
 }
 
+QList<DiffChange> DTLAlgorithm::diffLineByLine(const QString &leftFile, const QString &rightFile)
+{
+    // Split texts into lines for DTL processing
+    QStringList leftLines = splitIntoLines(leftFile);
+    QStringList rightLines = splitIntoLines(rightFile);
+
+    // Convert to std::vector for DTL
+    std::vector<QString> leftVec(leftLines.begin(), leftLines.end());
+    std::vector<QString> rightVec(rightLines.begin(), rightLines.end());
+
+    // Create DTL diff object and calculate differences
+    dtl::Diff<QString> dtlDiff(leftVec, rightVec);
+    dtlDiff.compose();
+
+    // Convert DTL result to QDiffX format
+    return convertDTLSequence(dtlDiff);
+}
+
+QList<DiffChange> DTLAlgorithm::convertDTLSequence(const dtl::Diff<QString> &dtlDiff) const
+{
+    QList<DiffChange> changes;
+    auto ses = dtlDiff.getSes();
+    int position = 0;
+
+    for (const auto &edit : ses.getSequence()) {
+        DiffChange change;
+        change.operation = convertDTLOperation(edit.second.type);
+        change.text = edit.first;
+        change.lineNumber = -1; // Will be calculated later
+        change.position = position;
+
+        changes.append(change);
+
+        // Update position (don't advance for deletions)
+        if (edit.second.type != dtl::SES_DELETE) {
+            position += edit.first.length();
+        }
+    }
+
+    return changes;
+}
+
 } // namespace QDiffX
