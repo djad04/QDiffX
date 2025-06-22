@@ -181,4 +181,60 @@ QList<DiffChange> DTLAlgorithm::convertDTLSequenceChar(const dtl::Diff<QChar> &d
     return changes;
 }
 
+QDiffResult DTLAlgorithm::calculateDiff(const QString &leftFile, const QString &rightFile, DiffMode mode)
+{
+    QDiffResult result;
+    try {
+        QList<DiffChange> changes;
+
+        // Choose diff method based on mode
+        switch (mode) {
+            case DiffMode::LineByLine:
+                changes = diffLineByLine(leftFile, rightFile);
+                break;
+
+            case DiffMode::CharByChar:
+                changes = diffCharByChar(leftFile, rightFile);
+                break;
+
+            case DiffMode::Auto:
+            default: {
+                // Auto mode: choose based on file size and content
+                int totalSize = leftFile.length() + rightFile.length();
+                QVariant threshold = getConfiguration().value(CONFIG_LARGE_FILE_THRESHOLD, 1024 * 1024);
+
+                if (totalSize > threshold.toInt()) {
+                    // Large files: use line-by-line for better performance
+                    changes = diffLineByLine(leftFile, rightFile);
+                } else {
+                    // Small files: use character-by-character for precision
+                    changes = diffCharByChar(leftFile, rightFile);
+                }
+                break;
+            }
+        }
+
+        // Calculate line numbers for the changes
+        calculateLineNumbers(changes, leftFile, rightFile);
+
+        result.setChanges(changes);
+        result.setSuccess(true);
+
+        // Add metadata about the algorithm used
+        QMap<QString, QVariant> metadata;
+        metadata["algorithm"] = "DTL";
+        metadata["algorithm_name"] = getName();
+        metadata["mode"] = (mode == DiffMode::LineByLine) ? "line" :
+                          (mode == DiffMode::CharByChar) ? "char" : "auto";
+        metadata["total_changes"] = changes.size();
+        result.setMetaData(metadata);
+
+    } catch (...) {
+        result.setSuccess(false);
+        result.setErrorMessage("DTL algorithm failed to calculate diff");
+    }
+
+    return result;
+}
+
 } // namespace QDiffX
