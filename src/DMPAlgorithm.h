@@ -6,7 +6,7 @@
 namespace QDiffX{
 
 
-class DMPAlgorithm : QDiffAlgorithm
+class DMPAlgorithm : public QDiffAlgorithm
 {
 public:
     DMPAlgorithm();
