@@ -23,6 +23,7 @@ QDiffX::DMPAlgorithm::DMPAlgorithm() : m_checkLines(true) {
     m_dmp.Match_MaxBits = 8192;
 }
 
+
 QDiffX::QDiffResult QDiffX::DMPAlgorithm::calculateDiff(const QString &leftFile, const QString &rightFile, DiffMode)
 {
     QDiffResult result;
@@ -39,6 +40,11 @@ QDiffX::QDiffResult QDiffX::DMPAlgorithm::calculateDiff(const QString &leftFile,
     }
 
     return result;
+}
+QList<Diff> DMPAlgorithm::diffCharByChar(const QString &leftFile, const QString &rightFile) const
+{
+    QList<Diff> dmpChanges = m_dmp.diff_main(leftFile, rightFile, m_checkLines);
+
 }
 
 AlgorithmCapabilities DMPAlgorithm::getCapabilities() const
@@ -99,6 +105,18 @@ QStringList DMPAlgorithm::getConfigurationKeys() const {
         CONFIG_MATCH_MAX_BITS,
         CONFIG_CHECK_LINES
     };
+}
+
+int DMPAlgorithm::estimateComplexity(const QString &leftText, const QString &rightText) const
+{
+    // TODO: requires Benchmark
+    return 0;
+}
+
+bool DMPAlgorithm::isRecommendedFor(const QString &leftText, const QString &rightText) const
+{
+    // TODO: will be implemented Later
+    return 0;
 }
 
 DiffOperation DMPAlgorithm::convertOperation(Operation dmpOp) const
