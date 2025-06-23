@@ -12,10 +12,10 @@ public:
     DTLAlgorithm();
     virtual ~DTLAlgorithm() = default;
 
-    // QDiffAlgorithm interface Implementation
+    // Algorithm interface Implementation
     QDiffResult calculateDiff(const QString &leftFile, const QString &rightFile, DiffMode mode = DiffMode::Auto) override;
 
-    // DTL-specific diff methods
+    // diff methods
     QList<DiffChange> diffLineByLine(const QString &leftFile, const QString &rightFile);
     QList<DiffChange> diffCharByChar(const QString &leftFile, const QString &rightFile);
 
