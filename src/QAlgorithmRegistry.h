@@ -2,11 +2,29 @@
 #define QALGORITHMREGISTRY_H
 #include "QDiffAlgorithm.h"
 
+namespace QDiffX{
+
+using QAlgorithmFactory = std::function<std::unique_ptr<QDiffAlgorithm>()>;
+
+struct QAlgorithmInfo{
+    QString name;
+    QString description;
+    AlgorithmCapabilities capabilities;
+    QAlgorithmFactory factory;
+
+    QAlgorithmInfo(){}
+    QAlgorithmInfo(QString name, QString description,
+                   AlgorithmCapabilities capabilities,
+                   QAlgorithmFactory factory)
+        : name(std::move(name)), description(std::move(description)),
+        capabilities(std::move(capabilities)), factory(std::move(factory)) {}
+};
+
 // follows singleton pattern
 class QAlgorithmRegistry
 {
 public:
- static QAlgorithmRegistry& get_Instance();
+    static QAlgorithmRegistry& get_Instance();
 
 private:
     QAlgorithmRegistry() = default;
@@ -19,4 +37,5 @@ private:
 
 };
 
+}// namespace QDiffX
 #endif // QALGORITHMREGISTRY_H
