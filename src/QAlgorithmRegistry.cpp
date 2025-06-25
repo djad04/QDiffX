@@ -82,4 +82,14 @@ bool QAlgorithmRegistry::isAlgorithmAvailable(const QString &algorithmId) const
         return false;
 }
 
+void QAlgorithmRegistry::clear()
+{
+    m_algorithms.clear();
+}
+
+int QAlgorithmRegistry::getAlgorithmCount()
+{
+    return m_algorithms.size();
+}
+
 }// namespace QDiffX
