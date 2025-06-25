@@ -92,4 +92,14 @@ int QAlgorithmRegistry::getAlgorithmCount()
     return m_algorithms.size();
 }
 
+std::unique_ptr<QDiffAlgorithm> QAlgorithmRegistry::createAlgorithm(const QString &algorithmId) const
+{
+    auto it = m_algorithms.find(algorithmId);
+    if(it == m_algorithms.end()){
+        qWarning() << "QAlgorithmRegistry::createAlgorithm: algorithm not found:" << algorithmId;
+        return nullptr;
+    }
+        return it->factory();
+}
+
 }// namespace QDiffX
