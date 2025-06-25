@@ -36,6 +36,8 @@ public:
     void clear();
     int getAlgorithmCount();
 
+    std::unique_ptr<QDiffAlgorithm> createAlgorithm(const QString& algorithmId) const;
+
 template<typename AlgorithmType>
     bool registerAlgorithm(const QString &algorithmId) {
     auto temp = std::make_unique<AlgorithmType>();
