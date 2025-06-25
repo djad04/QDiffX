@@ -26,6 +26,10 @@ class QAlgorithmRegistry
 public:
     static QAlgorithmRegistry& get_Instance();
 
+    bool registerAlgorithm(const QString &algorithmId, const QAlgorithmInfo &info);
+
+    bool unregisterAlgorithm(const QString &algorithmId);
+
 private:
     QAlgorithmRegistry() = default;
     ~QAlgorithmRegistry() = default;
@@ -35,6 +39,8 @@ private:
     QAlgorithmRegistry operator=(const QAlgorithmRegistry &) = delete;
     QAlgorithmRegistry operator=(const QAlgorithmRegistry &&) = delete;
 
+private:
+    QMap<QString, QAlgorithmInfo> m_algorithms;
 };
 
 }// namespace QDiffX
