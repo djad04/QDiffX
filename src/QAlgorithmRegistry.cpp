@@ -11,32 +11,40 @@ QAlgorithmRegistry &QAlgorithmRegistry::get_Instance()
 bool QDiffX::QAlgorithmRegistry::registerAlgorithm(const QString &algorithmId, const QAlgorithmInfo &info)
 {
     if (algorithmId.isEmpty()) {
-        qWarning() << "Cannot register algorithm with empty ID ";
+        qWarning() << "QAlgorithmRegistry::registerAlgorithm: Empty algorithm ID provided";
         return false;
     }
-    if(m_algorithms.contains(algorithmId)) {
-        qWarning() << "algorithm already Regestred \n" ;
+
+    if (m_algorithms.contains(algorithmId)) {
+        qWarning() << "QAlgorithmRegistry::registerAlgorithm: Algorithm already registered:" << algorithmId;
         return false;
     }
-    if(!info.factory) {
-        qWarning() << "cant register an algorithm without a factory function ";
+
+    if (!info.factory) {
+        qWarning() << "QAlgorithmRegistry::registerAlgorithm: No factory function provided for algorithm:" << algorithmId;
+        return false;
     }
     m_algorithms[algorithmId] = info;
 
 
-    qDebug() << "Registered algorithm:" << algorithmId << "(" << info.name << ")";
+    qDebug() << "QAlgorithmRegistry: Registered algorithm " << algorithmId << "(" << info.name << ")";
     return true;
 }
 
 bool QAlgorithmRegistry::unregisterAlgorithm(const QString &algorithmId)
 {
-    if(!m_algorithms.contains(algorithmId)) {
-        qWarning() << "cant unregister a non registered algorithm";
+    if (algorithmId.isEmpty()) {
+        qWarning() << "QAlgorithmRegistry::unregisterAlgorithm: Empty algorithm ID provided";
         return false;
     }
 
-    m_algorithms.remove(algorithmId) ;
-    qDebug() << "Unregistered algorithm:" << algorithmId;
+    if (!m_algorithms.contains(algorithmId)) {
+        qWarning() << "QAlgorithmRegistry::unregisterAlgorithm: Algorithm not registered:" << algorithmId;
+        return false;
+    }
+
+    m_algorithms.remove(algorithmId);
+    qDebug() << "QAlgorithmRegistry: unregistered algorithm" << algorithmId;
     return true;
 }
 
@@ -64,7 +72,7 @@ const QAlgorithmInfo* QAlgorithmRegistry::getAlgorithmInfo(const QString &algori
 bool QAlgorithmRegistry::isAlgorithmAvailable(const QString &algorithmId) const
 {
     if (algorithmId.isEmpty()) {
-        qWarning() << "QAlgorithmRegistry::getAlgorithmInfo: empty algorithm id provided";
+        qWarning() << "QAlgorithmRegistry::isAlgorithmAvailable: Empty algorithm ID provided";
         return false;
     }
 
