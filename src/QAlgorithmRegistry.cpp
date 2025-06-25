@@ -28,4 +28,16 @@ bool QDiffX::QAlgorithmRegistry::registerAlgorithm(const QString &algorithmId, c
     return true;
 }
 
+bool QAlgorithmRegistry::unregisterAlgorithm(const QString &algorithmId)
+{
+    if(!m_algorithms.contains(algorithmId)) {
+        qWarning() << "cant unregister a non registered algorithm";
+        return false;
+    }
+
+    m_algorithms.remove(algorithmId) ;
+    qDebug() << "Unregistered algorithm:" << algorithmId;
+    return true;
+}
+
 }// namespace QDiffX
