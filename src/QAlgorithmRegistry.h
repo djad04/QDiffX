@@ -27,8 +27,12 @@ public:
     static QAlgorithmRegistry& get_Instance();
 
     bool registerAlgorithm(const QString &algorithmId, const QAlgorithmInfo &info);
-
     bool unregisterAlgorithm(const QString &algorithmId);
+
+    QStringList getAvailableAlgorithms() const;
+    const QAlgorithmInfo* getAlgorithmInfo(const QString &algorithmId) const;
+    bool isAlgorithmAvailable(const QString &algorithmId) const;
+
 
 private:
     QAlgorithmRegistry() = default;
