@@ -33,6 +33,24 @@ public:
     const QAlgorithmInfo* getAlgorithmInfo(const QString &algorithmId) const;
     bool isAlgorithmAvailable(const QString &algorithmId) const;
 
+    void clear();
+    int getAlgorithmCount();
+
+template<typename AlgorithmType>
+    bool registerAlgorithm(const QString &algorithmId) {
+    auto temp = std::make_unique<AlgorithmType>();
+
+    QAlgorithmInfo info;
+    info.name = temp.getName();
+    info.description = temp.getDescription();
+    info.capabilities = temp.getCapabilities();
+    info.factory = []() -> std::unique_ptr<QDiffAlgorithm> {
+        return std::make_unique<AlgorithmType>();
+    };
+
+    return registerAlgorithm(algorithmId, info);
+}
+
 
 private:
     QAlgorithmRegistry() = default;
