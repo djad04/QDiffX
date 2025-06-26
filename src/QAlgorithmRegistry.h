@@ -32,7 +32,7 @@ public:
     bool unregisterAlgorithm(const QString &algorithmId);
 
     QStringList getAvailableAlgorithms() const;
-    const QAlgorithmInfo* getAlgorithmInfo(const QString &algorithmId) const;
+    std::optional<QAlgorithmInfo> getAlgorithmInfo(const QString &algorithmId) const;
     bool isAlgorithmAvailable(const QString &algorithmId) const;
 
     void clear();
