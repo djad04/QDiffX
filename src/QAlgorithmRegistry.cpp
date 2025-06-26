@@ -11,8 +11,9 @@ QAlgorithmRegistry &QAlgorithmRegistry::get_Instance()
 
 bool QDiffX::QAlgorithmRegistry::registerAlgorithm(const QString &algorithmId, const QAlgorithmInfo &info)
 {
-    QMutexLocker locker(&m_mutex);
     {
+        QMutexLocker locker(&m_mutex);
+
         if (algorithmId.isEmpty()) {
             qWarning() << "QAlgorithmRegistry::registerAlgorithm: Empty algorithm ID provided";
             return false;
@@ -30,15 +31,16 @@ bool QDiffX::QAlgorithmRegistry::registerAlgorithm(const QString &algorithmId, c
         m_algorithms[algorithmId] = info;
     }
 
-
+    emit algorithmRegistered(algorithmId);
     qDebug() << "QAlgorithmRegistry: Registered algorithm " << algorithmId << "(" << info.name << ")";
     return true;
 }
 
 bool QAlgorithmRegistry::unregisterAlgorithm(const QString &algorithmId)
 {
-    QMutexLocker locker(&m_mutex);
     {
+        QMutexLocker locker(&m_mutex);
+
         if (algorithmId.isEmpty()) {
             qWarning() << "QAlgorithmRegistry::unregisterAlgorithm: Empty algorithm ID provided";
             return false;
@@ -51,6 +53,8 @@ bool QAlgorithmRegistry::unregisterAlgorithm(const QString &algorithmId)
 
         m_algorithms.remove(algorithmId);
     }
+
+    emit  algorithmUnregistered(algorithmId) ;
     qDebug() << "QAlgorithmRegistry: unregistered algorithm" << algorithmId;
     return true;
 }
