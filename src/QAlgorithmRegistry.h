@@ -5,6 +5,14 @@
 
 namespace QDiffX{
 
+enum class QAlgorithmRegistryError {
+    None,
+    EmptyAlgorithmId,
+    AlgorithmAlreadyRegistered,
+    AlgorithmNotFound,
+    InvalidFactory,
+    FactoryCreationFailed
+};
 using QAlgorithmFactory = std::function<std::unique_ptr<QDiffAlgorithm>()>;
 
 struct QAlgorithmInfo{
@@ -30,6 +38,7 @@ public:
 
     bool registerAlgorithm(const QString &algorithmId, const QAlgorithmInfo &info);
     bool unregisterAlgorithm(const QString &algorithmId);
+    std::unique_ptr<QDiffAlgorithm> createAlgorithm(const QString& algorithmId) const;
 
     QStringList getAvailableAlgorithms() const;
     std::optional<QAlgorithmInfo> getAlgorithmInfo(const QString &algorithmId) const;
@@ -37,8 +46,6 @@ public:
 
     void clear();
     int getAlgorithmCount();
-
-    std::unique_ptr<QDiffAlgorithm> createAlgorithm(const QString& algorithmId) const;
 
     template<typename AlgorithmType>
     bool registerAlgorithm(const QString &algorithmId) {
@@ -55,6 +62,13 @@ public:
         return registerAlgorithm(algorithmId, info);
     }
 
+    // Error Handeling:
+    QAlgorithmRegistryError lastError() const { return m_lastError; }
+    QString errorMessage(const QAlgorithmRegistryError &error) const;
+    QString lastErrorMessage() const;
+
+
+
 signals:
     void algorithmRegistered(const QString& algorithmId);
     void algorithmUnregistered(const QString& algorithmId);
@@ -68,9 +82,12 @@ private:
     QAlgorithmRegistry operator=(const QAlgorithmRegistry &) = delete;
     QAlgorithmRegistry operator=(const QAlgorithmRegistry &&) = delete;
 
+    void setLastError(QAlgorithmRegistryError error) const { m_lastError = error; }
+
 private:
     QMap<QString, QAlgorithmInfo> m_algorithms;
     mutable QMutex m_mutex;
+    mutable QAlgorithmRegistryError m_lastError = QAlgorithmRegistryError::None;
 };
 
 }// namespace QDiffX
