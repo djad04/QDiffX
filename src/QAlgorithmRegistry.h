@@ -1,6 +1,7 @@
 #ifndef QALGORITHMREGISTRY_H
 #define QALGORITHMREGISTRY_H
 #include "QDiffAlgorithm.h"
+#include <QMutex>
 
 namespace QDiffX{
 
@@ -65,6 +66,7 @@ private:
 
 private:
     QMap<QString, QAlgorithmInfo> m_algorithms;
+    mutable QMutex m_mutex;
 };
 
 }// namespace QDiffX
