@@ -67,6 +67,15 @@ public:
     QString errorMessage(const QAlgorithmRegistryError &error) const;
     QString lastErrorMessage() const;
 
+    void setErrorOutputEnabled(bool enabled) {
+        QMutexLocker locker(&m_mutex);
+        m_errorOutputEnabled = enabled;
+    }
+    bool isErrorOutputEnabled() const {
+        QMutexLocker locker(&m_mutex);
+        return m_errorOutputEnabled;
+    }
+
 
 
 signals:
@@ -88,6 +97,7 @@ private:
     QMap<QString, QAlgorithmInfo> m_algorithms;
     mutable QMutex m_mutex;
     mutable QAlgorithmRegistryError m_lastError = QAlgorithmRegistryError::None;
+    bool m_errorOutputEnabled = false;
 };
 
 }// namespace QDiffX
