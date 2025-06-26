@@ -63,7 +63,7 @@ public:
     }
 
     // Error Handeling:
-    QAlgorithmRegistryError lastError() const { return m_lastError; }
+    QAlgorithmRegistryError lastError() const {  QMutexLocker locker(&m_mutex); return m_lastError; }
     QString errorMessage(const QAlgorithmRegistryError &error) const;
     QString lastErrorMessage() const;
 
