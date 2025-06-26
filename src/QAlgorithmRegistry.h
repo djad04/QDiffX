@@ -22,8 +22,9 @@ struct QAlgorithmInfo{
 };
 
 // follows singleton pattern
-class QAlgorithmRegistry
+class QAlgorithmRegistry : public QObject
 {
+    Q_OBJECT
 public:
     static QAlgorithmRegistry& get_Instance();
 
@@ -39,21 +40,24 @@ public:
 
     std::unique_ptr<QDiffAlgorithm> createAlgorithm(const QString& algorithmId) const;
 
-template<typename AlgorithmType>
+    template<typename AlgorithmType>
     bool registerAlgorithm(const QString &algorithmId) {
-    auto temp = std::make_unique<AlgorithmType>();
+        auto temp = std::make_unique<AlgorithmType>();
 
-    QAlgorithmInfo info;
-    info.name = temp.getName();
-    info.description = temp.getDescription();
-    info.capabilities = temp.getCapabilities();
-    info.factory = []() -> std::unique_ptr<QDiffAlgorithm> {
-        return std::make_unique<AlgorithmType>();
-    };
+        QAlgorithmInfo info;
+        info.name = temp.getName();
+        info.description = temp.getDescription();
+        info.capabilities = temp.getCapabilities();
+        info.factory = []() -> std::unique_ptr<QDiffAlgorithm> {
+            return std::make_unique<AlgorithmType>();
+        };
 
-    return registerAlgorithm(algorithmId, info);
-}
+        return registerAlgorithm(algorithmId, info);
+    }
 
+signals:
+    void algorithmRegistered(const QString& algorithmId);
+    void algorithmUnregistered(const QString& algorithmId);
 
 private:
     QAlgorithmRegistry() = default;
