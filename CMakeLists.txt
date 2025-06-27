@@ -32,6 +32,7 @@ if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
         src/DMPAlgorithm.h src/DMPAlgorithm.cpp
         src/DTLAlgorithm.cpp src/DTLAlgorithm.h
         src/QAlgorithmRegistry.h src/QAlgorithmRegistry.cpp
+        src/QAlgorithmManager.h src/QAlgorithmManager.cpp
 
     )
 # Define target properties for Android with Qt 6 as:
