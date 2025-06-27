@@ -20,12 +20,21 @@ class QAlgorithmManager : QObject
 {
     Q_OBJECT
 public:
-    QAlgorithmManager();
+    QAlgorithmManager(QObject *parent = nullptr);
     ~QAlgorithmManager();
 
 
-private:
 
+
+private:
+    AlgorithmSelectionMode m_selectionMode;
+    ExecutionMode m_executionMode;
+    QString m_currentAlgorithm;
+    QString m_fallBackAlgorithm;
+
+    // Default algorithms
+    static const QString DEFAULT_ALGORITHM;
+    static const QString DEFAULT_FALLBACK;
 };
 
 }//namespace QDiffX
