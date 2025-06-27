@@ -3,6 +3,12 @@
 #include "QDiffAlgorithm.h"
 #include "QAlgorithmRegistry.h"
 
+/*
+TODO:
+- function setCurrentAlgorithm and setFallbackAlgorithm require error
+handeling integration once the error system is implemented
+*/
+
 namespace QDiffX {
 
 enum class AlgorithmSelectionMode{
@@ -23,7 +29,22 @@ public:
     ~QAlgorithmManager();
 
 
+    bool isAlgorithmAvailable(const QString &algorithmId) const;
 
+    AlgorithmSelectionMode selectionMode() const;
+    void setSelectionMode(AlgorithmSelectionMode newSelectionMode);
+    ExecutionMode executionMode() const;
+    void setExecutionMode(ExecutionMode newExecutionMode);
+    QString currentAlgorithm() const;
+    void setCurrentAlgorithm(const QString &newCurrentAlgorithm);
+    QString fallBackAlgorithm() const;
+    void setFallBackAlgorithm(const QString &newFallBackAlgorithm);
+
+signals:
+    void selectionModeChanged();
+    void executionModeChanged();
+    void currentAlgorithmChanged();
+    void fallBackAlgorithmChanged();
 
 private:
     AlgorithmSelectionMode m_selectionMode;
