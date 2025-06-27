@@ -3,7 +3,10 @@
 
 #include "QDiffAlgorithm.h"
 #include "dtl/dtl.hpp"
-
+/*
+TODO:
+- Implement Functions estimateComplexity and is isRecommendedFor
+*/
 namespace QDiffX {
 
 class DTLAlgorithm : public QDiffAlgorithm
