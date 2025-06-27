@@ -7,8 +7,7 @@ namespace QDiffX {
 
 enum class AlgorithmSelectionMode{
     Auto,
-    DMP,
-    DTL
+    Manual
 };
 
 enum class ExecutionMode{
