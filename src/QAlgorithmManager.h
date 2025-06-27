@@ -8,6 +8,17 @@ TODO:
 - function setCurrentAlgorithm and setFallbackAlgorithm require error
 handeling integration once the error system is implemented
 */
+enum class QAlgorithmManagerError {
+    None,
+    AlgorithmNotAvailable,
+    AlgorithmCreationFailed,
+    InvalidAlgorithmId,
+    DiffExecutionFailed,
+    ConfigurationError,
+    Timeout,
+    OperationCancelled,
+    Unknown
+};
 
 namespace QDiffX {
 
