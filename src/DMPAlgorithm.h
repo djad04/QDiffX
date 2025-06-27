@@ -2,7 +2,10 @@
 #define DMPALGORITHM_H
 #include "QDiffAlgorithm.h"
 #include "DMP/diff_match_patch.h"
-
+/*
+TODO:
+- Implement Functions estimateComplexity and is isRecommendedFor
+*/
 namespace QDiffX{
 
 

@@ -37,7 +37,7 @@ class QAlgorithmManager : QObject
     Q_OBJECT
 public:
     QAlgorithmManager(QObject *parent = nullptr);
-    ~QAlgorithmManager();
+    ~QAlgorithmManager() = default;
 
 
     bool isAlgorithmAvailable(const QString &algorithmId) const;
