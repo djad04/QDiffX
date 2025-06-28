@@ -10,7 +10,7 @@ handeling integration once the error system is implemented
 */
 enum class QAlgorithmManagerError {
     None,
-    AlgorithmNotAvailable,
+    AlgorithmNotFound,
     AlgorithmCreationFailed,
     InvalidAlgorithmId,
     DiffExecutionFailed,
@@ -51,11 +51,23 @@ public:
     QString fallBackAlgorithm() const;
     void setFallBackAlgorithm(const QString &newFallBackAlgorithm);
 
+    // Error Handeling
+    QAlgorithmManagerError lastError() const { return m_lastError; }
+    QString errorMessage(const QAlgorithmManagerError &error) const;
+    QString lastErrorMessage() const;
+
+    bool errorOutputEnabled() const;
+    void setErrorOutputEnabled(bool newErrorOutputEnabled);
+
 signals:
     void selectionModeChanged();
     void executionModeChanged();
     void currentAlgorithmChanged();
     void fallBackAlgorithmChanged();
+    void errorOccurred(QAlgorithmManagerError error);
+
+private:
+    void setLastError(QAlgorithmManagerError newLastError);
 
 private:
     AlgorithmSelectionMode m_selectionMode;
@@ -66,6 +78,9 @@ private:
     // Default algorithms
     static const QString DEFAULT_ALGORITHM;
     static const QString DEFAULT_FALLBACK;
+
+    QAlgorithmManagerError m_lastError;
+    bool m_errorOutputEnabled = false;
 };
 
 }//namespace QDiffX
