@@ -60,11 +60,11 @@ public:
     void setErrorOutputEnabled(bool newErrorOutputEnabled);
 
 signals:
-    void selectionModeChanged();
-    void executionModeChanged();
+    void errorOccurred(QAlgorithmManagerError error, const QString& message);
     void currentAlgorithmChanged();
     void fallBackAlgorithmChanged();
-    void errorOccurred(QAlgorithmManagerError error);
+    void selectionModeChanged();
+    void executionModeChanged();
 
 private:
     void setLastError(QAlgorithmManagerError newLastError);

@@ -58,7 +58,7 @@ void QAlgorithmManager::setCurrentAlgorithm(const QString &algorithmId)
     if (algorithmId.isEmpty()) {
         setLastError(QAlgorithmManagerError::InvalidAlgorithmId);
         if (m_errorOutputEnabled) qWarning() << "QAlgorithmManager::setCurrentAlgorithm:: Algorithm ID is empty";
-
+        emit errorOccurred(QAlgorithmManagerError::InvalidAlgorithmId, errorMessage(QAlgorithmManagerError::InvalidAlgorithmId));
         return;
     }
     if (m_currentAlgorithm == algorithmId)
@@ -66,7 +66,7 @@ void QAlgorithmManager::setCurrentAlgorithm(const QString &algorithmId)
     if(!isAlgorithmAvailable(algorithmId)) {
         setLastError(QAlgorithmManagerError::AlgorithmNotFound);
         if(m_errorOutputEnabled) qWarning() << "QAlgorithmManager::setCurrentAlgorithm:: Algorithm " << '"' << algorithmId << '"' << " is not Found ";
-
+        emit errorOccurred(QAlgorithmManagerError::AlgorithmNotFound, errorMessage(QAlgorithmManagerError::AlgorithmNotFound));
         return;
     }
     m_currentAlgorithm = algorithmId;
@@ -83,7 +83,7 @@ void QAlgorithmManager::setFallBackAlgorithm(const QString &algorithmId)
     if (algorithmId.isEmpty()) {
         setLastError(QAlgorithmManagerError::InvalidAlgorithmId);
         if (m_errorOutputEnabled) qWarning() << "QAlgorithmManager::setFallBackAlgorithm:: Algorithm ID is empty";
-
+        emit errorOccurred(QAlgorithmManagerError::InvalidAlgorithmId, errorMessage(QAlgorithmManagerError::InvalidAlgorithmId));
         return;
     }
     if (m_fallBackAlgorithm == algorithmId)
@@ -91,7 +91,7 @@ void QAlgorithmManager::setFallBackAlgorithm(const QString &algorithmId)
     if(!isAlgorithmAvailable(algorithmId)) {
         setLastError(QAlgorithmManagerError::AlgorithmNotFound);
         if(m_errorOutputEnabled) qWarning() << "QAlgorithmManager::setFallBackAlgorithm:: Algorithm " << '"' << algorithmId << '"' << " is not Found ";
-
+        emit errorOccurred(QAlgorithmManagerError::AlgorithmNotFound, errorMessage(QAlgorithmManagerError::AlgorithmNotFound));
         return;
     }
     m_fallBackAlgorithm = algorithmId;
