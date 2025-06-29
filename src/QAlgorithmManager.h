@@ -2,32 +2,26 @@
 #define QALGORITHMMANAGER_H
 #include "QDiffAlgorithm.h"
 #include "QAlgorithmRegistry.h"
+#include "QAlgorithmManagerError.h"
+#include <QFuture>
 
 /*
 TODO:
 - function setCurrentAlgorithm and setFallbackAlgorithm require error
 handeling integration once the error system is implemented
 */
-enum class QAlgorithmManagerError {
-    None,
-    AlgorithmNotFound,
-    AlgorithmCreationFailed,
-    InvalidAlgorithmId,
-    DiffExecutionFailed,
-    ConfigurationError,
-    Timeout,
-    OperationCancelled,
-    Unknown
-};
 
 namespace QDiffX {
 
-enum class AlgorithmSelectionMode{
+
+
+
+enum class QAlgorithmSelectionMode{
     Auto,
     Manual
 };
 
-enum class ExecutionMode{
+enum class QExecutionMode{
     Asynchronous,
     Synchronous
 };
@@ -39,13 +33,31 @@ public:
     QAlgorithmManager(QObject *parent = nullptr);
     ~QAlgorithmManager() = default;
 
+    // Diff Functions:
+    QFuture<QDiffResult> calculateDiff(const QString &leftText, const QString &rightText,
+                                       QExecutionMode executionMode = QExecutionMode::Asynchronous,
+                                       QAlgorithmSelectionMode selectionMode = QAlgorithmSelectionMode::Auto,
+                                       QString algorithmId = QString());
+
+    QFuture<QDiffResult> calculateDiffAsync(const QString &leftText, const QString &rightText,
+                                            QAlgorithmSelectionMode selectionMode = QAlgorithmSelectionMode::Auto,
+                                            QString algorithmId = QString());
+
+    QDiffResult calculateDiffSync(const QString &leftText, const QString &rightText,
+                                  QAlgorithmSelectionMode selectionMode = QAlgorithmSelectionMode::Auto,
+                                  QString algorithmId = QString());
+
+    QDiffResult calculateDiffWithAlgorithm(const QString& algorithmId,
+                                           const QString& leftText,
+                                           const QString& rightText);
+
 
     bool isAlgorithmAvailable(const QString &algorithmId) const;
 
-    AlgorithmSelectionMode selectionMode() const;
-    void setSelectionMode(AlgorithmSelectionMode newSelectionMode);
-    ExecutionMode executionMode() const;
-    void setExecutionMode(ExecutionMode newExecutionMode);
+    QAlgorithmSelectionMode selectionMode() const;
+    void setSelectionMode(QAlgorithmSelectionMode newSelectionMode);
+    QExecutionMode executionMode() const;
+    void setExecutionMode(QExecutionMode newExecutionMode);
     QString currentAlgorithm() const;
     void setCurrentAlgorithm(const QString &newCurrentAlgorithm);
     QString fallBackAlgorithm() const;
@@ -68,10 +80,12 @@ signals:
 
 private:
     void setLastError(QAlgorithmManagerError newLastError);
-
+    void executeAlgorithm(const QString& algorithmId,
+                          const QString& leftText,
+                          const QString& rightText);
 private:
-    AlgorithmSelectionMode m_selectionMode;
-    ExecutionMode m_executionMode;
+    QAlgorithmSelectionMode m_selectionMode;
+    QExecutionMode m_executionMode;
     QString m_currentAlgorithm;
     QString m_fallBackAlgorithm;
 
