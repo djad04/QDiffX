@@ -1,4 +1,5 @@
 #include "QAlgorithmManager.h"
+#include <QtConcurrent/QtConcurrent>
 
 namespace QDiffX{
 const QString QAlgorithmManager::DEFAULT_ALGORITHM = "dtl";
@@ -9,10 +10,48 @@ QAlgorithmManager::QAlgorithmManager(QObject *parent)
     : QObject(parent),
     m_currentAlgorithm(DEFAULT_ALGORITHM),
     m_fallBackAlgorithm(DEFAULT_FALLBACK),
-    m_selectionMode(AlgorithmSelectionMode::Auto),
-    m_executionMode(ExecutionMode::Synchronous),
+    m_selectionMode(QAlgorithmSelectionMode::Auto),
+    m_executionMode(QExecutionMode::Synchronous),
     m_lastError(QAlgorithmManagerError::None)
 {
+
+}
+
+QFuture<QDiffResult> QAlgorithmManager::calculateDiff(const QString &leftText, const QString &rightText, QExecutionMode executionMode, QAlgorithmSelectionMode selectionMode, QString algorithmId)
+{
+    if(selectionMode == QAlgorithmSelectionMode::Manual)
+    {
+        if (algorithmId.isEmpty()) {
+            setLastError(QAlgorithmManagerError::InvalidAlgorithmId);
+            if (m_errorOutputEnabled) {
+                qWarning() << "QAlgorithmManager::calculateDiff: Algorithm ID is empty";
+            }
+            emit errorOccurred(QAlgorithmManagerError::InvalidAlgorithmId,
+                               errorMessage(QAlgorithmManagerError::InvalidAlgorithmId));
+
+            // Return failed future
+            QPromise<QDiffResult> promise;
+            promise.start();
+            promise.setException(QAlgorithmException(QAlgorithmManagerError::InvalidAlgorithmId,
+                                                     "Algorithm ID cannot be empty in manual mode"));
+            promise.finish();
+            return promise.future();
+        }
+    }
+    if (executionMode == QExecutionMode::Synchronous) {
+        // Create already-finished future
+        QPromise<QDiffResult> promise;
+        promise.start();
+        auto result = executeAlgorithm(leftText, rightText);
+        promise.addResult(result);
+        promise.finish();
+        return promise.future();
+    } else {
+        // Return actual async future
+        return QtConcurrent::run([=] {
+            return doSyncCalculation(left, right);
+        });
+    }
 
 }
 
@@ -35,12 +74,12 @@ void QAlgorithmManager::setSelectionMode(AlgorithmSelectionMode newSelectionMode
     emit selectionModeChanged();
 }
 
-ExecutionMode QAlgorithmManager::executionMode() const
+QExecutionMode QAlgorithmManager::executionMode() const
 {
     return m_executionMode;
 }
 
-void QAlgorithmManager::setExecutionMode(ExecutionMode newExecutionMode)
+void QAlgorithmManager::setExecutionMode(QExecutionMode newExecutionMode)
 {
     if (m_executionMode == newExecutionMode)
         return;
