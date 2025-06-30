@@ -6,6 +6,9 @@
 #include <QTextStream>
 #include <QFileInfo>
 
+namespace QDiffX {
+
+
 QDiffWidget::QDiffWidget(QWidget *parent, const QString &leftLabelText, const QString &rightLabelText)
     : QWidget(parent),
     m_leftLabel(leftLabelText),
@@ -261,3 +264,5 @@ QString QDiffWidget::readFileToQString(const QString &filePath, FileOperationRes
 
     return content;
 }
+
+}//namespace QDiffX
