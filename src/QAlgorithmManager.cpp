@@ -1,4 +1,5 @@
 #include "QAlgorithmManager.h"
+#include "QAlgorithmException.h"
 #include <QtConcurrent/QtConcurrent>
 
 namespace QDiffX{
@@ -19,40 +20,71 @@ QAlgorithmManager::QAlgorithmManager(QObject *parent)
 
 QFuture<QDiffResult> QAlgorithmManager::calculateDiff(const QString &leftText, const QString &rightText, QExecutionMode executionMode, QAlgorithmSelectionMode selectionMode, QString algorithmId)
 {
+
+    if (executionMode == QExecutionMode::Synchronous) {
+    // TODO
+    } else {
+
+    }
+
+}
+
+QFuture<QDiffResult> QAlgorithmManager::calculateDiffAsync(const QString &leftText, const QString &rightText, QAlgorithmSelectionMode selectionMode, QString algorithmId)
+{
+    QString algorithm;
     if(selectionMode == QAlgorithmSelectionMode::Manual)
     {
-        if (algorithmId.isEmpty()) {
-            setLastError(QAlgorithmManagerError::InvalidAlgorithmId);
-            if (m_errorOutputEnabled) {
-                qWarning() << "QAlgorithmManager::calculateDiff: Algorithm ID is empty";
+        if(algorithmId.isEmpty()) {
+
+            if (m_currentAlgorithm.isEmpty()) {
+
+                setLastError(QAlgorithmManagerError::InvalidAlgorithmId);
+                if (m_errorOutputEnabled) qWarning() << "QAlgorithmManager::calculateDiffAsync:: Algorithm ID is empty no selected algorithm";
+                emit errorOccurred(QAlgorithmManagerError::InvalidAlgorithmId, errorMessage(QAlgorithmManagerError::InvalidAlgorithmId));
+
+                QPromise<QDiffResult> promise;
+                promise.start();
+                promise.addResult(QDiffResult(errorMessage(QAlgorithmManagerError::InvalidAlgorithmId)));
+                promise.finish();
+                return promise.future();
             }
-            emit errorOccurred(QAlgorithmManagerError::InvalidAlgorithmId,
-                               errorMessage(QAlgorithmManagerError::InvalidAlgorithmId));
 
-            // Return failed future
-            QPromise<QDiffResult> promise;
-            promise.start();
-            promise.setException(QAlgorithmException(QAlgorithmManagerError::InvalidAlgorithmId,
-                                                     "Algorithm ID cannot be empty in manual mode"));
-            promise.finish();
-            return promise.future();
+            algorithm = m_currentAlgorithm;
         }
+        else {
+            if(!isAlgorithmAvailable(algorithmId)) {
+                setLastError(QAlgorithmManagerError::AlgorithmNotFound);
+                if(m_errorOutputEnabled) qWarning() << "QAlgorithmManager::setCurrentAlgorithm:: Algorithm " << '"' << algorithmId << '"' << " is not Found ";
+                emit errorOccurred(QAlgorithmManagerError::AlgorithmNotFound, errorMessage(QAlgorithmManagerError::AlgorithmNotFound));
+
+                QPromise<QDiffResult> promise;
+                promise.start();
+                promise.addResult(QDiffResult(errorMessage(QAlgorithmManagerError::AlgorithmNotFound)));
+                promise.finish();
+                return promise.future();
+            }
+            algorithm = algorithmId;
+        }
+
+
     }
-    if (executionMode == QExecutionMode::Synchronous) {
-        // Create already-finished future
-        QPromise<QDiffResult> promise;
-        promise.start();
-        auto result = executeAlgorithm(leftText, rightText);
-        promise.addResult(result);
-        promise.finish();
-        return promise.future();
-    } else {
-        // Return actual async future
-        return QtConcurrent::run([=] {
-            return doSyncCalculation(left, right);
-        });
+    else {
+        algorithm = autoSelectAlgorithm(leftText, rightText);
     }
 
+    auto future =  QtConcurrent::run(&QAlgorithmManager::executeAlgorithm,
+                                    this,
+                                    algorithm,
+                                    leftText,
+                                    rightText);
+    auto *watcher = new QFutureWatcher<QDiffResult>(this);
+    connect(watcher, &QFutureWatcher<QDiffResult>::finished, this, [this, watcher]() {
+        emit diffCalculated(watcher->result());
+        watcher->deleteLater();
+    });
+    watcher->setFuture(future);
+
+    return future;
 }
 
 bool QAlgorithmManager::isAlgorithmAvailable(const QString &algorithmId) const
@@ -61,12 +93,12 @@ bool QAlgorithmManager::isAlgorithmAvailable(const QString &algorithmId) const
     return registry.isAlgorithmAvailable(algorithmId);
 }
 
-AlgorithmSelectionMode QAlgorithmManager::selectionMode() const
+QAlgorithmSelectionMode QAlgorithmManager::selectionMode() const
 {
     return m_selectionMode;
 }
 
-void QAlgorithmManager::setSelectionMode(AlgorithmSelectionMode newSelectionMode)
+void QAlgorithmManager::setSelectionMode(QAlgorithmSelectionMode newSelectionMode)
 {
     if (m_selectionMode == newSelectionMode)
         return;
@@ -181,6 +213,27 @@ void QAlgorithmManager::setErrorOutputEnabled(bool newErrorOutputEnabled)
 void QAlgorithmManager::setLastError(QAlgorithmManagerError newLastError)
 {
     m_lastError = newLastError;
+}
+
+QString QAlgorithmManager::autoSelectAlgorithm(const QString& leftText, const QString& rightText) const
+{
+    const int threshold = 1000;
+    int totalLength = leftText.length() + rightText.length();
+
+    if (totalLength < threshold && isAlgorithmAvailable("dmp")) {
+        return "dmp";
+    }
+    if (isAlgorithmAvailable("dtl")) {
+        return "dtl";
+    }
+    if (!m_currentAlgorithm.isEmpty() && isAlgorithmAvailable(m_currentAlgorithm)) {
+        return m_currentAlgorithm;
+    }
+    if (isAlgorithmAvailable(DEFAULT_ALGORITHM)) {
+        return DEFAULT_ALGORITHM;
+    }
+
+    return QString();
 }
 
 
