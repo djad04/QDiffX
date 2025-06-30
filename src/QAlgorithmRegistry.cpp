@@ -160,7 +160,7 @@ QString QAlgorithmRegistry::errorMessage(const QAlgorithmRegistryError &error) c
 
 QString QAlgorithmRegistry::lastErrorMessage() const
 {
-     QMutexLocker locker(&m_mutex);
+    QMutexLocker locker(&m_mutex);
     return errorMessage(m_lastError);
 }
 

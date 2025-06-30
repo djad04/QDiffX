@@ -1,5 +1,4 @@
-#ifndef DMPALGORITHM_H
-#define DMPALGORITHM_H
+#pragma once
 #include "QDiffAlgorithm.h"
 #include "DMP/diff_match_patch.h"
 /*
@@ -61,4 +60,3 @@ private:
 
 
 }// namespace QDiffX
-#endif // DMPALGORITHM_H

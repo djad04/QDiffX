@@ -1,5 +1,4 @@
-#ifndef QALGORITHMMANAGER_H
-#define QALGORITHMMANAGER_H
+#pragma once
 #include "QDiffAlgorithm.h"
 #include "QAlgorithmRegistry.h"
 #include "QAlgorithmManagerError.h"
@@ -103,4 +102,3 @@ private:
 };
 
 }//namespace QDiffX
-#endif // QALGORITHMMANAGER_H

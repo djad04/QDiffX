@@ -35,8 +35,7 @@
 
 /* If you use this library, you must include dtl.hpp only. */
 
-#ifndef DTL_SES_H
-#define DTL_SES_H
+#pragma once
 
 namespace dtl {
     
@@ -129,4 +128,3 @@ namespace dtl {
     };
 }
 
-#endif // DTL_SES_H

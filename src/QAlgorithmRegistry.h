@@ -1,5 +1,4 @@
-#ifndef QALGORITHMREGISTRY_H
-#define QALGORITHMREGISTRY_H
+#pragma once
 #include "QDiffAlgorithm.h"
 #include <QMutex>
 
@@ -101,4 +100,3 @@ private:
 };
 
 }// namespace QDiffX
-#endif // QALGORITHMREGISTRY_H

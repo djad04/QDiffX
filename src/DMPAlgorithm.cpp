@@ -32,20 +32,20 @@ QDiffX::QDiffResult QDiffX::DMPAlgorithm::calculateDiff(const QString &leftFile,
 
         // Choose diff method based on mode
         switch (mode) {
-            case DiffMode::LineByLine:
-                dmpChanges = diffLineByLine(leftFile, rightFile);
-                break;
+        case DiffMode::LineByLine:
+            dmpChanges = diffLineByLine(leftFile, rightFile);
+            break;
 
-            case DiffMode::CharByChar:
-                dmpChanges = diffCharByChar(leftFile, rightFile);
-                break;
+        case DiffMode::CharByChar:
+            dmpChanges = diffCharByChar(leftFile, rightFile);
+            break;
 
-            case DiffMode::Auto:
-            default:
-              dmpChanges = m_dmp.diff_main(leftFile, rightFile);
-                m_dmp.diff_cleanupSemantic(dmpChanges);
-                m_dmp.diff_cleanupEfficiency(dmpChanges);
-                break;
+        case DiffMode::Auto:
+        default:
+            dmpChanges = m_dmp.diff_main(leftFile, rightFile);
+            m_dmp.diff_cleanupSemantic(dmpChanges);
+            m_dmp.diff_cleanupEfficiency(dmpChanges);
+            break;
         }
 
 
@@ -61,7 +61,7 @@ QDiffX::QDiffResult QDiffX::DMPAlgorithm::calculateDiff(const QString &leftFile,
         QMap<QString, QVariant> metadata;
         metadata["algorithm"] = "DMP";
         metadata["mode"] = (mode == DiffMode::LineByLine) ? "line" :
-                          (mode == DiffMode::CharByChar) ? "char" : "auto";
+                               (mode == DiffMode::CharByChar) ? "char" : "auto";
         metadata["total_changes"] = changes.size();
         result.setMetaData(metadata);
 
