@@ -1,5 +1,4 @@
 #include "QAlgorithmManager.h"
-#include "QAlgorithmException.h"
 #include <QtConcurrent/QtConcurrent>
 
 namespace QDiffX{
@@ -129,7 +128,7 @@ QDiffResult QAlgorithmManager::calculateDiffWithAlgorithm(const QString &algorit
         setLastError(QAlgorithmManagerError::AlgorithmNotFound);
         if (m_errorOutputEnabled) qWarning() << "QAlgorithmManager::calculateDiffWithAlgorithm:: Algorithm " << '"' << algorithmId << '"' << " is not Found ";
         emit errorOccurred(QAlgorithmManagerError::AlgorithmNotFound, errorMessage(QAlgorithmManagerError::AlgorithmNotFound));
-        return QDiffResult(errorMessage(QAlgorithmdManagerError::AlgorithmNotFound));
+        return QDiffResult(errorMessage(QAlgorithmManagerError::AlgorithmNotFound));
     }
     return executeAlgorithm(algorithmId, leftText, rightText);
 }
@@ -281,6 +280,37 @@ QString QAlgorithmManager::autoSelectAlgorithm(const QString& leftText, const QS
     }
 
     return QString();
+}
+
+QDiffResult QAlgorithmManager::executeAlgorithm(const QString& algorithmId, const QString& leftText, const QString& rightText)
+{
+    QMutexLocker locker(&m_mutex);
+    auto& registry = QAlgorithmRegistry::get_Instance();
+    auto algorithm = registry.createAlgorithm(algorithmId);
+
+    if (!algorithm) {
+        auto regError = registry.lastError();
+        auto regErrorMsg = registry.lastErrorMessage();
+        setLastError(QAlgorithmManagerError::AlgorithmCreationFailed);
+        QString msg = errorMessage(QAlgorithmManagerError::AlgorithmCreationFailed);
+        if (!regErrorMsg.isEmpty())
+            msg += ": " + regErrorMsg;
+        if (m_errorOutputEnabled) qWarning() << "QAlgorithmManager::executeAlgorithm:: Failed to create algorithm instance for" << algorithmId << ", registry error:" << regErrorMsg;
+        emit errorOccurred(QAlgorithmManagerError::AlgorithmCreationFailed, msg);
+        return QDiffResult(msg);
+    }
+
+    QDiffResult result = algorithm->calculateDiff(leftText, rightText);
+
+    if (!result.success()) {
+        setLastError(QAlgorithmManagerError::DiffExecutionFailed);
+        if (m_errorOutputEnabled) qWarning() << "QAlgorithmManager::executeAlgorithm:: Diff failed:" << result.errorMessage();
+        emit errorOccurred(QAlgorithmManagerError::DiffExecutionFailed, result.errorMessage());
+    } else {
+        setLastError(QAlgorithmManagerError::None);
+    }
+
+    return result;
 }
 
 

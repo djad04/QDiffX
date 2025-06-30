@@ -92,6 +92,7 @@ private:
     QExecutionMode m_executionMode;
     QString m_currentAlgorithm;
     QString m_fallBackAlgorithm;
+    mutable QMutex m_mutex;
 
     // Default algorithms
     static const QString DEFAULT_ALGORITHM;

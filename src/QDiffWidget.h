@@ -5,6 +5,9 @@
 #include <QTextBrowser>
 #include <QWidget>
 
+namespace QDiffX {
+
+
 class QDiffWidget : public QWidget
 {
     Q_OBJECT
@@ -81,4 +84,6 @@ private:
     FileOperationResult m_lastError = FileOperationResult::Success;
 
 };
+
+}//namespace QDiffX
 #endif // QDIFFWIDGET_H
