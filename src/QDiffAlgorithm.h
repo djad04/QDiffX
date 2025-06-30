@@ -56,6 +56,9 @@ class QDiffResult{
 public:
     QDiffResult() : m_success(false) {}
 
+    // Error Constructor:
+    QDiffResult(QString errorMessage) : m_success(false), m_errorMessage(errorMessage) {}
+
     QList<DiffChange> changes() const { return m_changes; }
     void addChange(const DiffChange &change) { m_changes.append(change); }
     void setChanges(const QList<DiffChange> &newChanges) { m_changes = newChanges;}

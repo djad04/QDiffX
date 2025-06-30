@@ -4,12 +4,13 @@
 #include "QAlgorithmRegistry.h"
 #include "QAlgorithmManagerError.h"
 #include <QFuture>
-
 /*
-TODO:
-- function setCurrentAlgorithm and setFallbackAlgorithm require error
-handeling integration once the error system is implemented
+ TODO:
+-calculateDiffSync
+-calculateDiffWithAlgorithm
+-calculateDiff
 */
+
 
 namespace QDiffX {
 
@@ -77,12 +78,15 @@ signals:
     void fallBackAlgorithmChanged();
     void selectionModeChanged();
     void executionModeChanged();
+    void diffCalculated(const QDiffResult &result);
 
 private:
     void setLastError(QAlgorithmManagerError newLastError);
-    void executeAlgorithm(const QString& algorithmId,
+    QDiffResult executeAlgorithm(const QString& algorithmId,
                           const QString& leftText,
                           const QString& rightText);
+QString autoSelectAlgorithm (const QString& leftText,
+                             const QString& rightText) const;
 private:
     QAlgorithmSelectionMode m_selectionMode;
     QExecutionMode m_executionMode;

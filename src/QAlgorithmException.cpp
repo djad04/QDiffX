@@ -2,7 +2,6 @@
 
 namespace QDiffX {
 
-QAlgorithmException::QAlgorithmException() {}
 
 
 }//namespace QDiffX
