@@ -1,5 +1,4 @@
-#ifndef QALGORITHMMANAGERERROR_H
-#define QALGORITHMMANAGERERROR_H
+#pragma once
 
 namespace QDiffX{
 
@@ -17,4 +16,3 @@ enum class QAlgorithmManagerError {
 };
 
 }//namespace QDiffX
-#endif // QALGORITHMMANAGERERROR_H

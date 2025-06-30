@@ -24,8 +24,7 @@
  * - Cross-platform compatibility
  */
 
-#ifndef DIFF_MATCH_PATCH_H
-#define DIFF_MATCH_PATCH_H
+#pragma once
 
 // Qt includes
 #include <QString>
@@ -621,5 +620,3 @@ class diff_match_patch {
     return (pos == str.length()) ? QString("") : str.mid(pos, len);
   }
 };
-
-#endif // DIFF_MATCH_PATCH_H

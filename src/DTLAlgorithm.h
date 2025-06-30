@@ -1,5 +1,4 @@
-#ifndef DTLALGORITHM_H
-#define DTLALGORITHM_H
+#pragma once
 
 #include "QDiffAlgorithm.h"
 #include "dtl/dtl.hpp"
@@ -59,5 +58,3 @@ private:
 };
 
 } // namespace QDiffX
-
-#endif // DTLALGORITHM_H

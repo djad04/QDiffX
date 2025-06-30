@@ -1,5 +1,4 @@
-#ifndef QDIFFALGORITHM_H
-#define QDIFFALGORITHM_H
+#pragma once
 
 #include <QList>
 #include <QMap>
@@ -117,5 +116,3 @@ private:
 
 
 }//namespace QDiffX
-
-#endif // QDIFFALGORITHM_H

@@ -1,5 +1,4 @@
-#ifndef QALGORITHMEXCEPTION_H
-#define QALGORITHMEXCEPTION_H
+#pragma once
 #include <QAlgorithmManagerError.h>
 #include <QException>
 
@@ -24,4 +23,3 @@ private:
 };
 
 }//namespace QDiffX
-#endif // QALGORITHMEXCEPTION_H

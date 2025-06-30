@@ -1,5 +1,4 @@
-#ifndef QDIFFWIDGET_H
-#define QDIFFWIDGET_H
+#pragma once
 
 #include <QSplitter>
 #include <QTextBrowser>
@@ -86,4 +85,3 @@ private:
 };
 
 }//namespace QDiffX
-#endif // QDIFFWIDGET_H

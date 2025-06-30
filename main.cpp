@@ -17,7 +17,7 @@ int main(int argc, char *argv[])
             break;
         }
     }
-    QDiffWidget w;
+    QDiffX::QDiffWidget w;
     w.show();
     return a.exec();
 }

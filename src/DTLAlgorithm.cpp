@@ -29,29 +29,29 @@ QDiffResult DTLAlgorithm::calculateDiff(const QString &leftFile, const QString &
 
         // Choose diff method based on mode
         switch (mode) {
-            case DiffMode::LineByLine:
+        case DiffMode::LineByLine:
+            changes = diffLineByLine(leftFile, rightFile);
+            break;
+
+        case DiffMode::CharByChar:
+            changes = diffCharByChar(leftFile, rightFile);
+            break;
+
+        case DiffMode::Auto:
+        default: {
+            // Auto mode: choose based on file size and content
+            int totalSize = leftFile.length() + rightFile.length();
+            QVariant threshold = getConfiguration().value(CONFIG_LARGE_FILE_THRESHOLD, 1024 * 1024);
+
+            if (totalSize > threshold.toInt()) {
+                // Large files: use line-by-line for better performance
                 changes = diffLineByLine(leftFile, rightFile);
-                break;
-
-            case DiffMode::CharByChar:
+            } else {
+                // Small files: use character-by-character for precision
                 changes = diffCharByChar(leftFile, rightFile);
-                break;
-
-            case DiffMode::Auto:
-            default: {
-                // Auto mode: choose based on file size and content
-                int totalSize = leftFile.length() + rightFile.length();
-                QVariant threshold = getConfiguration().value(CONFIG_LARGE_FILE_THRESHOLD, 1024 * 1024);
-
-                if (totalSize > threshold.toInt()) {
-                    // Large files: use line-by-line for better performance
-                    changes = diffLineByLine(leftFile, rightFile);
-                } else {
-                    // Small files: use character-by-character for precision
-                    changes = diffCharByChar(leftFile, rightFile);
-                }
-                break;
             }
+            break;
+        }
         }
 
         // Calculate line numbers for the changes
@@ -65,7 +65,7 @@ QDiffResult DTLAlgorithm::calculateDiff(const QString &leftFile, const QString &
         metadata["algorithm"] = "DTL";
         metadata["algorithm_name"] = getName();
         metadata["mode"] = (mode == DiffMode::LineByLine) ? "line" :
-                          (mode == DiffMode::CharByChar) ? "char" : "auto";
+                               (mode == DiffMode::CharByChar) ? "char" : "auto";
         metadata["total_changes"] = changes.size();
         result.setMetaData(metadata);
 
