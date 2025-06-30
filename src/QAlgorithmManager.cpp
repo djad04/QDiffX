@@ -22,11 +22,14 @@ QFuture<QDiffResult> QAlgorithmManager::calculateDiff(const QString &leftText, c
 {
 
     if (executionMode == QExecutionMode::Synchronous) {
-    // TODO
+        QPromise<QDiffResult> promise;
+        promise.start();
+        promise.addResult(calculateDiffSync(leftText, rightText, selectionMode, algorithmId));
+        promise.finish();
+        return promise.future();
     } else {
-
+        return calculateDiffAsync(leftText, rightText, selectionMode, algorithmId);
     }
-
 }
 
 QFuture<QDiffResult> QAlgorithmManager::calculateDiffAsync(const QString &leftText, const QString &rightText, QAlgorithmSelectionMode selectionMode, QString algorithmId)
@@ -85,6 +88,50 @@ QFuture<QDiffResult> QAlgorithmManager::calculateDiffAsync(const QString &leftTe
     watcher->setFuture(future);
 
     return future;
+}
+
+QDiffResult QAlgorithmManager::calculateDiffSync(const QString &leftText, const QString &rightText, QAlgorithmSelectionMode selectionMode, QString algorithmId)
+{
+    QString algorithm;
+    if (selectionMode == QAlgorithmSelectionMode::Manual) {
+        if (algorithmId.isEmpty()) {
+            if (m_currentAlgorithm.isEmpty()) {
+                setLastError(QAlgorithmManagerError::InvalidAlgorithmId);
+                if (m_errorOutputEnabled) qWarning() << "QAlgorithmManager::calculateDiffSync:: Algorithm ID is empty no selected algorithm";
+                emit errorOccurred(QAlgorithmManagerError::InvalidAlgorithmId, errorMessage(QAlgorithmManagerError::InvalidAlgorithmId));
+                return QDiffResult(errorMessage(QAlgorithmManagerError::InvalidAlgorithmId));
+            }
+            algorithm = m_currentAlgorithm;
+        } else {
+            if (!isAlgorithmAvailable(algorithmId)) {
+                setLastError(QAlgorithmManagerError::AlgorithmNotFound);
+                if (m_errorOutputEnabled) qWarning() << "QAlgorithmManager::calculateDiffSync:: Algorithm " << '"' << algorithmId << '"' << " is not Found ";
+                emit errorOccurred(QAlgorithmManagerError::AlgorithmNotFound, errorMessage(QAlgorithmManagerError::AlgorithmNotFound));
+                return QDiffResult(errorMessage(QAlgorithmManagerError::AlgorithmNotFound));
+            }
+            algorithm = algorithmId;
+        }
+    } else {
+        algorithm = autoSelectAlgorithm(leftText, rightText);
+    }
+    return executeAlgorithm(algorithm, leftText, rightText);
+}
+
+QDiffResult QAlgorithmManager::calculateDiffWithAlgorithm(const QString &algorithmId, const QString &leftText, const QString &rightText)
+{
+    if (algorithmId.isEmpty()) {
+        setLastError(QAlgorithmManagerError::InvalidAlgorithmId);
+        if (m_errorOutputEnabled) qWarning() << "QAlgorithmManager::calculateDiffWithAlgorithm:: Algorithm ID is empty";
+        emit errorOccurred(QAlgorithmManagerError::InvalidAlgorithmId, errorMessage(QAlgorithmManagerError::InvalidAlgorithmId));
+        return QDiffResult(errorMessage(QAlgorithmManagerError::InvalidAlgorithmId));
+    }
+    if (!isAlgorithmAvailable(algorithmId)) {
+        setLastError(QAlgorithmManagerError::AlgorithmNotFound);
+        if (m_errorOutputEnabled) qWarning() << "QAlgorithmManager::calculateDiffWithAlgorithm:: Algorithm " << '"' << algorithmId << '"' << " is not Found ";
+        emit errorOccurred(QAlgorithmManagerError::AlgorithmNotFound, errorMessage(QAlgorithmManagerError::AlgorithmNotFound));
+        return QDiffResult(errorMessage(QAlgorithmdManagerError::AlgorithmNotFound));
+    }
+    return executeAlgorithm(algorithmId, leftText, rightText);
 }
 
 bool QAlgorithmManager::isAlgorithmAvailable(const QString &algorithmId) const
