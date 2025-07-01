@@ -77,7 +77,7 @@ signals:
     void fallBackAlgorithmChanged();
     void selectionModeChanged();
     void executionModeChanged();
-    void diffCalculated(const QDiffResult &result);
+    void diffCalculated(const QDiffX::QDiffResult &result);
 
 private:
     void setLastError(QAlgorithmManagerError newLastError);
