@@ -1,4 +1,6 @@
 #include "QAlgorithmRegistry.h"
+#include "DTLAlgorithm.h"
+#include "DMPAlgorithm.h"
 #include <QMutexLocker>
 
 namespace QDiffX{
@@ -7,6 +9,31 @@ QAlgorithmRegistry &QAlgorithmRegistry::get_Instance()
 {
     static QAlgorithmRegistry instance;
     return instance;
+}
+
+QAlgorithmRegistry::QAlgorithmRegistry()
+{
+    initializeDefaultAlgorithms();
+}
+
+void QAlgorithmRegistry::initializeDefaultAlgorithms()
+{
+    DTLAlgorithm dtl;
+    QAlgorithmInfo dtlInfo;
+    dtlInfo.name = dtl.getName();
+    dtlInfo.description = dtl.getDescription();
+    dtlInfo.capabilities = dtl.getCapabilities();
+    dtlInfo.factory = []() { return std::make_unique<DTLAlgorithm>(); };
+    registerAlgorithm("dtl", dtlInfo);
+
+    // Register DMP Algorithm
+    DMPAlgorithm dmp;
+    QAlgorithmInfo dmpInfo;
+    dmpInfo.name = dmp.getName();
+    dmpInfo.description = dmp.getDescription();
+    dmpInfo.capabilities = dmp.getCapabilities();
+    dmpInfo.factory = []() { return std::make_unique<DMPAlgorithm>(); };
+    registerAlgorithm("dmp", dmpInfo);
 }
 
 bool QDiffX::QAlgorithmRegistry::registerAlgorithm(const QString &algorithmId, const QAlgorithmInfo &info)

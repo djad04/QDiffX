@@ -82,8 +82,11 @@ signals:
     void algorithmUnregistered(const QString& algorithmId);
 
 private:
-    QAlgorithmRegistry() = default;
+    QAlgorithmRegistry();
     ~QAlgorithmRegistry() = default;
+
+    // Init Function to Register all default algotithms (note: to integrate additional algorithms add them here)
+    void initializeDefaultAlgorithms();
 
     QAlgorithmRegistry(const QAlgorithmRegistry &) = delete;
     QAlgorithmRegistry(const QAlgorithmRegistry &&) = delete;
