@@ -37,7 +37,7 @@ public:
 
     bool registerAlgorithm(const QString &algorithmId, const QAlgorithmInfo &info);
     bool unregisterAlgorithm(const QString &algorithmId);
-    std::unique_ptr<QDiffAlgorithm> createAlgorithm(const QString& algorithmId) const;
+    std::unique_ptr<QDiffAlgorithm> createAlgorithm(const QString& algorithmId);
 
     QStringList getAvailableAlgorithms() const;
     std::optional<QAlgorithmInfo> getAlgorithmInfo(const QString &algorithmId) const;
