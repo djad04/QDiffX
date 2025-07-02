@@ -89,6 +89,11 @@ public:
 signals:
     void algorithmRegistered(const QString& algorithmId);
     void algorithmUnregistered(const QString& algorithmId);
+    void errorOccurred(QAlgorithmRegistryError error, const QString& message);
+    void algorithmConfigurationChanged(const QString& algorithmId, const QMap<QString, QVariant>& newConfig);
+    void registryCleared();
+    void algorithmsChanged(const QStringList& algorithmIds);
+    void algorithmAvailabilityChanged(const QString& algorithmId, bool available);
 
 private:
     QAlgorithmRegistry();
@@ -109,6 +114,8 @@ private:
     mutable QMutex m_mutex;
     mutable QAlgorithmRegistryError m_lastError = QAlgorithmRegistryError::None;
     bool m_errorOutputEnabled = false;
+    QMap<QString, QMap<QString, QVariant>> m_algorithmConfigs;
+
 };
 
 }// namespace QDiffX

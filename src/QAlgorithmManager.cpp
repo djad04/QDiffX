@@ -19,7 +19,6 @@ QAlgorithmManager::QAlgorithmManager(QObject *parent)
 
 QFuture<QDiffResult> QAlgorithmManager::calculateDiff(const QString &leftText, const QString &rightText, QExecutionMode executionMode, QAlgorithmSelectionMode selectionMode, QString algorithmId)
 {
-
     if (executionMode == QExecutionMode::Synchronous) {
         QPromise<QDiffResult> promise;
         promise.start();
@@ -37,20 +36,16 @@ QFuture<QDiffResult> QAlgorithmManager::calculateDiffAsync(const QString &leftTe
     if(selectionMode == QAlgorithmSelectionMode::Manual)
     {
         if(algorithmId.isEmpty()) {
-
             if (m_currentAlgorithm.isEmpty()) {
-
                 setLastError(QAlgorithmManagerError::InvalidAlgorithmId);
                 if (m_errorOutputEnabled) qWarning() << "QAlgorithmManager::calculateDiffAsync:: Algorithm ID is empty no selected algorithm";
                 emit errorOccurred(QAlgorithmManagerError::InvalidAlgorithmId, errorMessage(QAlgorithmManagerError::InvalidAlgorithmId));
-
                 QPromise<QDiffResult> promise;
                 promise.start();
                 promise.addResult(QDiffResult(errorMessage(QAlgorithmManagerError::InvalidAlgorithmId)));
                 promise.finish();
                 return promise.future();
             }
-
             algorithm = m_currentAlgorithm;
         }
         else {
@@ -58,7 +53,6 @@ QFuture<QDiffResult> QAlgorithmManager::calculateDiffAsync(const QString &leftTe
                 setLastError(QAlgorithmManagerError::AlgorithmNotFound);
                 if(m_errorOutputEnabled) qWarning() << "QAlgorithmManager::setCurrentAlgorithm:: Algorithm " << '"' << algorithmId << '"' << " is not Found ";
                 emit errorOccurred(QAlgorithmManagerError::AlgorithmNotFound, errorMessage(QAlgorithmManagerError::AlgorithmNotFound));
-
                 QPromise<QDiffResult> promise;
                 promise.start();
                 promise.addResult(QDiffResult(errorMessage(QAlgorithmManagerError::AlgorithmNotFound)));
@@ -67,13 +61,10 @@ QFuture<QDiffResult> QAlgorithmManager::calculateDiffAsync(const QString &leftTe
             }
             algorithm = algorithmId;
         }
-
-
     }
     else {
         algorithm = autoSelectAlgorithm(leftText, rightText);
     }
-
     auto future =  QtConcurrent::run(&QAlgorithmManager::executeAlgorithm,
                                     this,
                                     algorithm,
@@ -85,7 +76,6 @@ QFuture<QDiffResult> QAlgorithmManager::calculateDiffAsync(const QString &leftTe
         watcher->deleteLater();
     });
     watcher->setFuture(future);
-
     return future;
 }
 
@@ -284,20 +274,23 @@ QString QAlgorithmManager::autoSelectAlgorithm(const QString& leftText, const QS
 
 QDiffResult QAlgorithmManager::executeAlgorithm(const QString& algorithmId, const QString& leftText, const QString& rightText)
 {
+    emit aboutToCalculateDiff(leftText, rightText, algorithmId);
+    emit calculationStarted();
     QMutexLocker locker(&m_mutex);
     auto& registry = QAlgorithmRegistry::get_Instance();
     auto algorithm = registry.createAlgorithm(algorithmId);
 
     if (!algorithm) {
-        auto regError = registry.lastError();
         auto regErrorMsg = registry.lastErrorMessage();
         setLastError(QAlgorithmManagerError::AlgorithmCreationFailed);
         QString msg = errorMessage(QAlgorithmManagerError::AlgorithmCreationFailed);
         if (!regErrorMsg.isEmpty())
             msg += ": " + regErrorMsg;
-        if (m_errorOutputEnabled) qWarning() << "QAlgorithmManager::executeAlgorithm:: Failed to create algorithm instance for" << algorithmId << ", registry error:" << regErrorMsg;
+        if (m_errorOutputEnabled) qWarning() << "QAlgorithmManager::executeAlgorithm:: Failed to create algorithm instance for" << algorithmId << ", :" << regErrorMsg;
         emit errorOccurred(QAlgorithmManagerError::AlgorithmCreationFailed, msg);
-        return QDiffResult(msg);
+        QDiffResult failResult(msg);
+        emit calculationFinished(failResult);
+        return failResult;
     }
 
     QDiffResult result = algorithm->calculateDiff(leftText, rightText);
@@ -310,9 +303,40 @@ QDiffResult QAlgorithmManager::executeAlgorithm(const QString& algorithmId, cons
         setLastError(QAlgorithmManagerError::None);
     }
 
+    emit calculationFinished(result);
     return result;
 }
 
+void QAlgorithmManager::resetManager() {
+    setSelectionMode(QAlgorithmSelectionMode::Auto);
+    setExecutionMode(QExecutionMode::Synchronous);
+    setCurrentAlgorithm(DEFAULT_ALGORITHM);
+    setFallBackAlgorithm(DEFAULT_FALLBACK);
+    emit managerReset();
+}
 
+QMap<QString, QVariant> QAlgorithmManager::getAlgorithmConfiguration(const QString& algorithmId) const
+{
+    auto& registry = QAlgorithmRegistry::get_Instance();
+    return registry.getAlgorithmConfiguration(algorithmId);
+}
+
+bool QAlgorithmManager::setAlgorithmConfiguration(const QString& algorithmId, const QMap<QString, QVariant>& config)
+{
+    auto& registry = QAlgorithmRegistry::get_Instance();
+    bool success = registry.setAlgorithmConfiguration(algorithmId, config);
+    if (success) {
+        emit algorithmConfigurationChanged(algorithmId, config);
+    } else {
+        emit errorOccurred(QAlgorithmManagerError::ConfigurationError, "Failed to set configuration for " + algorithmId + ": " + registry.lastErrorMessage());
+    }
+    return success;
+}
+
+QStringList QAlgorithmManager::getAlgorithmConfigurationKeys(const QString& algorithmId) const
+{
+    auto& registry = QAlgorithmRegistry::get_Instance();
+    return registry.getAlgorithmConfigurationKeys(algorithmId);
+}
 
 }//namespace QDiffX

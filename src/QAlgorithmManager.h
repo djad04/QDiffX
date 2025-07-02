@@ -63,6 +63,11 @@ public:
     QString fallBackAlgorithm() const;
     void setFallBackAlgorithm(const QString &newFallBackAlgorithm);
 
+    // Algorithm Configuration Management (Delegates to QAlgorithmRegistry)
+    QMap<QString, QVariant> getAlgorithmConfiguration(const QString& algorithmId) const;
+    bool setAlgorithmConfiguration(const QString& algorithmId, const QMap<QString, QVariant>& config);
+    QStringList getAlgorithmConfigurationKeys(const QString& algorithmId) const;
+
     // Error Handeling
     QAlgorithmManagerError lastError() const { return m_lastError; }
     QString errorMessage(const QAlgorithmManagerError &error) const;
@@ -71,6 +76,8 @@ public:
     bool errorOutputEnabled() const;
     void setErrorOutputEnabled(bool newErrorOutputEnabled);
 
+    void resetManager();
+
 signals:
     void errorOccurred(QAlgorithmManagerError error, const QString& message);
     void currentAlgorithmChanged();
@@ -78,6 +85,14 @@ signals:
     void selectionModeChanged();
     void executionModeChanged();
     void diffCalculated(const QDiffX::QDiffResult &result);
+    void algorithmAvailabilityChanged(const QString& algorithmId, bool available);
+    void availableAlgorithmsChanged(const QStringList& newList);
+    void managerReset();
+    void configurationChanged(const QString& key, const QVariant& value);
+    void aboutToCalculateDiff(const QString& leftText, const QString& rightText, const QString& algorithmId);
+    void calculationStarted();
+    void calculationFinished(const QDiffX::QDiffResult& result);
+    void algorithmConfigurationChanged(const QString& algorithmId, const QMap<QString, QVariant>& config);
 
 private:
     void setLastError(QAlgorithmManagerError newLastError);

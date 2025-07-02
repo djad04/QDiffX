@@ -49,28 +49,29 @@ bool QDiffX::QAlgorithmRegistry::registerAlgorithm(const QString &algorithmId, c
 {
     {
         QMutexLocker locker(&m_mutex);
-
         if (algorithmId.isEmpty()) {
             if (m_errorOutputEnabled) qWarning() << "QAlgorithmRegistry::registerAlgorithm: Empty algorithm ID provided";
             setLastError(QAlgorithmRegistryError::EmptyAlgorithmId);
+            emit errorOccurred(QAlgorithmRegistryError::EmptyAlgorithmId, errorMessage(QAlgorithmRegistryError::EmptyAlgorithmId));
             return false;
         }
-
         if (m_algorithms.contains(algorithmId)) {
             if (m_errorOutputEnabled) qWarning() << "QAlgorithmRegistry::registerAlgorithm: Algorithm already registered:" << algorithmId;
             setLastError(QAlgorithmRegistryError::AlgorithmAlreadyRegistered);
+            emit errorOccurred(QAlgorithmRegistryError::AlgorithmAlreadyRegistered, errorMessage(QAlgorithmRegistryError::AlgorithmAlreadyRegistered) + ": " + algorithmId);
             return false;
         }
-
         if (!info.factory) {
             if (m_errorOutputEnabled) qWarning() << "QAlgorithmRegistry::registerAlgorithm: No factory function provided for algorithm:" << algorithmId;
             setLastError(QAlgorithmRegistryError::InvalidFactory);
+            emit errorOccurred(QAlgorithmRegistryError::InvalidFactory, errorMessage(QAlgorithmRegistryError::InvalidFactory) + ": " + algorithmId);
             return false;
         }
         m_algorithms[algorithmId] = info;
     }
-
     emit algorithmRegistered(algorithmId);
+    emit algorithmAvailabilityChanged(algorithmId, true);
+    emit algorithmsChanged(getAvailableAlgorithms());
     qDebug() << "QAlgorithmRegistry: Registered algorithm " << algorithmId << "(" << info.name << ")";
     return true;
 }
@@ -79,23 +80,23 @@ bool QAlgorithmRegistry::unregisterAlgorithm(const QString &algorithmId)
 {
     {
         QMutexLocker locker(&m_mutex);
-
         if (algorithmId.isEmpty()) {
             if (m_errorOutputEnabled) qWarning() << "QAlgorithmRegistry::unregisterAlgorithm: Empty algorithm ID provided";
             setLastError(QAlgorithmRegistryError::EmptyAlgorithmId);
+            emit errorOccurred(QAlgorithmRegistryError::EmptyAlgorithmId, errorMessage(QAlgorithmRegistryError::EmptyAlgorithmId));
             return false;
         }
-
         if (!m_algorithms.contains(algorithmId)) {
             if (m_errorOutputEnabled) qWarning() << "QAlgorithmRegistry::unregisterAlgorithm: Algorithm not registered:" << algorithmId;
             setLastError(QAlgorithmRegistryError::AlgorithmNotFound);
+            emit errorOccurred(QAlgorithmRegistryError::AlgorithmNotFound, errorMessage(QAlgorithmRegistryError::AlgorithmNotFound) + ": " + algorithmId);
             return false;
         }
-
         m_algorithms.remove(algorithmId);
     }
-
-    emit  algorithmUnregistered(algorithmId) ;
+    emit algorithmUnregistered(algorithmId);
+    emit algorithmAvailabilityChanged(algorithmId, false);
+    emit algorithmsChanged(getAvailableAlgorithms());
     qDebug() << "QAlgorithmRegistry: unregistered algorithm" << algorithmId;
     return true;
 }
@@ -146,6 +147,8 @@ void QAlgorithmRegistry::clear()
 {
     QMutexLocker locker(&m_mutex);
     m_algorithms.clear();
+    emit registryCleared();
+    emit algorithmsChanged(getAvailableAlgorithms());
 }
 
 int QAlgorithmRegistry::getAlgorithmCount()
@@ -236,15 +239,18 @@ bool QAlgorithmRegistry::setAlgorithmConfiguration(const QString &algorithmId, c
     if (algorithmId.isEmpty()) {
         if (m_errorOutputEnabled) qWarning() << "QAlgorithmRegistry::setAlgorithmConfiguration: Empty algorithm ID provided";
         setLastError(QAlgorithmRegistryError::EmptyAlgorithmId);
+        emit errorOccurred(QAlgorithmRegistryError::EmptyAlgorithmId, errorMessage(QAlgorithmRegistryError::EmptyAlgorithmId));
         return false;
     }
     auto it = m_algorithms.find(algorithmId);
     if (it == m_algorithms.end()) {
         if (m_errorOutputEnabled) qWarning() << "QAlgorithmRegistry::setAlgorithmConfiguration: algorithm not found:" << algorithmId;
         setLastError(QAlgorithmRegistryError::AlgorithmNotFound);
+        emit errorOccurred(QAlgorithmRegistryError::AlgorithmNotFound, errorMessage(QAlgorithmRegistryError::AlgorithmNotFound) + ": " + algorithmId);
         return false;
     }
     m_algorithmConfigs[algorithmId] = config;
+    emit algorithmConfigurationChanged(algorithmId, config);
     return true;
 }
 
@@ -278,6 +284,34 @@ std::unique_ptr<QDiffAlgorithm> QAlgorithmRegistry::createAlgorithm(const QStrin
     }
     setLastError(QAlgorithmRegistryError::None);
     return algo;
+}
+
+QStringList QAlgorithmRegistry::getAlgorithmConfigurationKeys(const QString& algorithmId) const
+{
+    QMutexLocker locker(&m_mutex);
+    if (algorithmId.isEmpty()) {
+        if (m_errorOutputEnabled) qWarning() << "QAlgorithmRegistry::getAlgorithmConfigurationKeys: Empty algorithm ID provided";
+        setLastError(QAlgorithmRegistryError::EmptyAlgorithmId);
+        return QStringList();
+    }
+    auto it = m_algorithms.find(algorithmId);
+    if (it == m_algorithms.end()) {
+        if (m_errorOutputEnabled) qWarning() << "QAlgorithmRegistry::getAlgorithmConfigurationKeys: algorithm not found:" << algorithmId;
+        setLastError(QAlgorithmRegistryError::AlgorithmNotFound);
+        return QStringList();
+    }
+    if (!it.value().factory) {
+        if (m_errorOutputEnabled) qWarning() << "QAlgorithmRegistry::getAlgorithmConfigurationKeys: No factory for algorithm:" << algorithmId;
+        setLastError(QAlgorithmRegistryError::InvalidFactory);
+        return QStringList();
+    }
+    std::unique_ptr<QDiffAlgorithm> algo = it.value().factory();
+    if (!algo) {
+        if (m_errorOutputEnabled) qWarning() << "QAlgorithmRegistry::getAlgorithmConfigurationKeys: Factory creation failed for algorithm:" << algorithmId;
+        setLastError(QAlgorithmRegistryError::FactoryCreationFailed);
+        return QStringList();
+    }
+    return algo->getConfigurationKeys();
 }
 
 QString QAlgorithmRegistry::errorMessage(const QAlgorithmRegistryError &error) const
