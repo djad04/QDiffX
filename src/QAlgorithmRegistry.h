@@ -61,6 +61,15 @@ public:
         return registerAlgorithm(algorithmId, info);
     }
 
+    // Algorithm Functions:
+    QString getAlgorithmName(const QString& algorithmId) const;
+    QString getAlgorithmDescription(const QString& algorithmId) const;
+    AlgorithmCapabilities getAlgorithmCapabilities(const QString& algorithmId) const;
+
+    QMap<QString, QVariant> getAlgorithmConfiguration(const QString& algorithmId) const;
+    bool setAlgorithmConfiguration(const QString& algorithmId, const QMap<QString, QVariant>& config);
+    QStringList getAlgorithmConfigurationKeys(const QString& algorithmId) const;
+
     // Error Handeling:
     QAlgorithmRegistryError lastError() const {  QMutexLocker locker(&m_mutex); return m_lastError; }
     QString errorMessage(const QAlgorithmRegistryError &error) const;
