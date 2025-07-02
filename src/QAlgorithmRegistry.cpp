@@ -14,6 +14,15 @@ QAlgorithmRegistry &QAlgorithmRegistry::get_Instance()
 QAlgorithmRegistry::QAlgorithmRegistry()
 {
     initializeDefaultAlgorithms();
+    // Initialize config maps for each algorithm with their default config
+    for (auto it = m_algorithms.begin(); it != m_algorithms.end(); ++it) {
+        if (it.value().factory) {
+            std::unique_ptr<QDiffAlgorithm> algo = it.value().factory();
+            if (algo) {
+                m_algorithmConfigs[it.key()] = algo->getConfiguration();
+            }
+        }
+    }
 }
 
 void QAlgorithmRegistry::initializeDefaultAlgorithms()
@@ -145,17 +154,130 @@ int QAlgorithmRegistry::getAlgorithmCount()
     return m_algorithms.size();
 }
 
+QString QAlgorithmRegistry::getAlgorithmName(const QString &algorithmId) const
+{
+    QMutexLocker locker(&m_mutex);
+    if (algorithmId.isEmpty()) {
+        if (m_errorOutputEnabled) qWarning() << "QAlgorithmRegistry::getAlgorithmName: Empty algorithm ID provided";
+        setLastError(QAlgorithmRegistryError::EmptyAlgorithmId);
+        return QString();
+    }
+    auto it = m_algorithms.find(algorithmId);
+    if (it == m_algorithms.end()) {
+        if (m_errorOutputEnabled) qWarning() << "QAlgorithmRegistry::getAlgorithmName: algorithm not found:" << algorithmId;
+        setLastError(QAlgorithmRegistryError::AlgorithmNotFound);
+        return QString();
+    }
+    return it.value().name;
+}
+
+QString QAlgorithmRegistry::getAlgorithmDescription(const QString &algorithmId) const
+{
+    QMutexLocker locker(&m_mutex);
+    if (algorithmId.isEmpty()) {
+        if (m_errorOutputEnabled) qWarning() << "QAlgorithmRegistry::getAlgorithmDescription: Empty algorithm ID provided";
+        setLastError(QAlgorithmRegistryError::EmptyAlgorithmId);
+        return QString();
+    }
+    auto it = m_algorithms.find(algorithmId);
+    if (it == m_algorithms.end()) {
+        if (m_errorOutputEnabled) qWarning() << "QAlgorithmRegistry::getAlgorithmDescription: algorithm not found:" << algorithmId;
+        setLastError(QAlgorithmRegistryError::AlgorithmNotFound);
+        return QString();
+    }
+    return it.value().description;
+}
+
+AlgorithmCapabilities QAlgorithmRegistry::getAlgorithmCapabilities(const QString &algorithmId) const
+{
+    QMutexLocker locker(&m_mutex);
+    if (algorithmId.isEmpty()) {
+        if (m_errorOutputEnabled) qWarning() << "QAlgorithmRegistry::getAlgorithmCapabilities: Empty algorithm ID provided";
+        setLastError(QAlgorithmRegistryError::EmptyAlgorithmId);
+        return AlgorithmCapabilities();
+    }
+    auto it = m_algorithms.find(algorithmId);
+    if (it == m_algorithms.end()) {
+        if (m_errorOutputEnabled) qWarning() << "QAlgorithmRegistry::getAlgorithmCapabilities: algorithm not found:" << algorithmId;
+        setLastError(QAlgorithmRegistryError::AlgorithmNotFound);
+        return AlgorithmCapabilities();
+    }
+    return it.value().capabilities;
+}
+
+QMap<QString, QVariant> QAlgorithmRegistry::getAlgorithmConfiguration(const QString &algorithmId) const
+{
+    QMutexLocker locker(&m_mutex);
+    if (algorithmId.isEmpty()) {
+        if (m_errorOutputEnabled) qWarning() << "QAlgorithmRegistry::getAlgorithmConfiguration: Empty algorithm ID provided";
+        setLastError(QAlgorithmRegistryError::EmptyAlgorithmId);
+        return QMap<QString, QVariant>();
+    }
+    auto it = m_algorithms.find(algorithmId);
+    if (it == m_algorithms.end()) {
+        if (m_errorOutputEnabled) qWarning() << "QAlgorithmRegistry::getAlgorithmConfiguration: algorithm not found:" << algorithmId;
+        setLastError(QAlgorithmRegistryError::AlgorithmNotFound);
+        return QMap<QString, QVariant>();
+    }
+    // Return stored config if available
+    if (m_algorithmConfigs.contains(algorithmId))
+        return m_algorithmConfigs[algorithmId];
+    // Fallback: get from default instance
+    if (it.value().factory) {
+        std::unique_ptr<QDiffAlgorithm> algo = it.value().factory();
+        if (algo) return algo->getConfiguration();
+    }
+    return QMap<QString, QVariant>();
+}
+
+bool QAlgorithmRegistry::setAlgorithmConfiguration(const QString &algorithmId, const QMap<QString, QVariant> &config)
+{
+    QMutexLocker locker(&m_mutex);
+    if (algorithmId.isEmpty()) {
+        if (m_errorOutputEnabled) qWarning() << "QAlgorithmRegistry::setAlgorithmConfiguration: Empty algorithm ID provided";
+        setLastError(QAlgorithmRegistryError::EmptyAlgorithmId);
+        return false;
+    }
+    auto it = m_algorithms.find(algorithmId);
+    if (it == m_algorithms.end()) {
+        if (m_errorOutputEnabled) qWarning() << "QAlgorithmRegistry::setAlgorithmConfiguration: algorithm not found:" << algorithmId;
+        setLastError(QAlgorithmRegistryError::AlgorithmNotFound);
+        return false;
+    }
+    m_algorithmConfigs[algorithmId] = config;
+    return true;
+}
+
 std::unique_ptr<QDiffAlgorithm> QAlgorithmRegistry::createAlgorithm(const QString &algorithmId) const
 {
     QMutexLocker locker(&m_mutex);
-
+    if (algorithmId.isEmpty()) {
+        if (m_errorOutputEnabled) qWarning() << "QAlgorithmRegistry::createAlgorithm: Empty algorithm ID provided";
+        setLastError(QAlgorithmRegistryError::EmptyAlgorithmId);
+        return nullptr;
+    }
     auto it = m_algorithms.find(algorithmId);
-    if(it == m_algorithms.end()){
+    if (it == m_algorithms.end()) {
         if (m_errorOutputEnabled) qWarning() << "QAlgorithmRegistry::createAlgorithm: algorithm not found:" << algorithmId;
         setLastError(QAlgorithmRegistryError::AlgorithmNotFound);
         return nullptr;
     }
-    return it->factory();
+    if (!it.value().factory) {
+        if (m_errorOutputEnabled) qWarning() << "QAlgorithmRegistry::createAlgorithm: No factory for algorithm:" << algorithmId;
+        setLastError(QAlgorithmRegistryError::InvalidFactory);
+        return nullptr;
+    }
+    std::unique_ptr<QDiffAlgorithm> algo = it.value().factory();
+    if (!algo) {
+        if (m_errorOutputEnabled) qWarning() << "QAlgorithmRegistry::createAlgorithm: Factory creation failed for algorithm:" << algorithmId;
+        setLastError(QAlgorithmRegistryError::FactoryCreationFailed);
+        return nullptr;
+    }
+    if (m_algorithmConfigs.contains(algorithmId)) {
+        algo->setConfiguration(m_algorithmConfigs[algorithmId]);
+    }
+    setLastError(QAlgorithmRegistryError::None);
+    return algo;
 }
 
 QString QAlgorithmRegistry::errorMessage(const QAlgorithmRegistryError &error) const
