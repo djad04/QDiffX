@@ -32,6 +32,9 @@ struct QAlgorithmInfo{
 class QAlgorithmRegistry : public QObject
 {
     Q_OBJECT
+    Q_PROPERTY(QStringList availableAlgorithms READ getAvailableAlgorithms NOTIFY algorithmsChanged)
+    Q_PROPERTY(int algorithmCount READ getAlgorithmCount NOTIFY algorithmsChanged)
+    Q_PROPERTY(bool errorOutputEnabled READ isErrorOutputEnabled WRITE setErrorOutputEnabled)
 public:
     static QAlgorithmRegistry& get_Instance();
 

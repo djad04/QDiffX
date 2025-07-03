@@ -26,9 +26,17 @@ enum class QExecutionMode{
     Synchronous
 };
 
-class QAlgorithmManager : QObject
+class QAlgorithmManager : public QObject
 {
     Q_OBJECT
+    Q_PROPERTY(QAlgorithmSelectionMode selectionMode READ selectionMode WRITE setSelectionMode NOTIFY selectionModeChanged)
+    Q_PROPERTY(QExecutionMode executionMode READ executionMode WRITE setExecutionMode NOTIFY executionModeChanged)
+    Q_PROPERTY(QString currentAlgorithm READ currentAlgorithm WRITE setCurrentAlgorithm NOTIFY currentAlgorithmChanged)
+    Q_PROPERTY(QString fallBackAlgorithm READ fallBackAlgorithm WRITE setFallBackAlgorithm NOTIFY fallBackAlgorithmChanged)
+    Q_PROPERTY(bool errorOutputEnabled READ errorOutputEnabled WRITE setErrorOutputEnabled)
+    Q_PROPERTY(QString lastErrorMessage READ lastErrorMessage NOTIFY errorOccurred)
+    Q_PROPERTY(QStringList availableAlgorithms READ getAvailableAlgorithms NOTIFY availableAlgorithmsChanged)
+    Q_PROPERTY(bool isCalculating READ isCalculating NOTIFY calculationStarted)
 public:
     QAlgorithmManager(QObject *parent = nullptr);
     ~QAlgorithmManager() = default;
@@ -68,6 +76,8 @@ public:
     bool setAlgorithmConfiguration(const QString& algorithmId, const QMap<QString, QVariant>& config);
     QStringList getAlgorithmConfigurationKeys(const QString& algorithmId) const;
 
+    QStringList getAvailableAlgorithms() const;
+    
     // Error Handeling
     QAlgorithmManagerError lastError() const { return m_lastError; }
     QString errorMessage(const QAlgorithmManagerError &error) const;
@@ -75,6 +85,8 @@ public:
 
     bool errorOutputEnabled() const;
     void setErrorOutputEnabled(bool newErrorOutputEnabled);
+
+    bool isCalculating() const;
 
     void resetManager();
 
@@ -97,10 +109,10 @@ signals:
 private:
     void setLastError(QAlgorithmManagerError newLastError);
     QDiffResult executeAlgorithm(const QString& algorithmId,
-                          const QString& leftText,
-                          const QString& rightText);
-QString autoSelectAlgorithm (const QString& leftText,
-                             const QString& rightText) const;
+                                 const QString& leftText,
+                                 const QString& rightText);
+    QString autoSelectAlgorithm (const QString& leftText,
+                                const QString& rightText) const;
 private:
     QAlgorithmSelectionMode m_selectionMode;
     QExecutionMode m_executionMode;
@@ -114,6 +126,7 @@ private:
 
     QAlgorithmManagerError m_lastError;
     bool m_errorOutputEnabled = false;
+    bool m_isCalculating = false;
 };
 
 }//namespace QDiffX
