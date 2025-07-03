@@ -12,7 +12,8 @@ QAlgorithmManager::QAlgorithmManager(QObject *parent)
     m_fallBackAlgorithm(DEFAULT_FALLBACK),
     m_selectionMode(QAlgorithmSelectionMode::Auto),
     m_executionMode(QExecutionMode::Synchronous),
-    m_lastError(QAlgorithmManagerError::None)
+    m_lastError(QAlgorithmManagerError::None),
+    m_isCalculating(false)
 {
 
 }
@@ -272,8 +273,13 @@ QString QAlgorithmManager::autoSelectAlgorithm(const QString& leftText, const QS
     return QString();
 }
 
+bool QAlgorithmManager::isCalculating() const {
+    return m_isCalculating;
+}
+
 QDiffResult QAlgorithmManager::executeAlgorithm(const QString& algorithmId, const QString& leftText, const QString& rightText)
 {
+    m_isCalculating = true;
     emit aboutToCalculateDiff(leftText, rightText, algorithmId);
     emit calculationStarted();
     QMutexLocker locker(&m_mutex);
@@ -289,11 +295,13 @@ QDiffResult QAlgorithmManager::executeAlgorithm(const QString& algorithmId, cons
         if (m_errorOutputEnabled) qWarning() << "QAlgorithmManager::executeAlgorithm:: Failed to create algorithm instance for" << algorithmId << ", :" << regErrorMsg;
         emit errorOccurred(QAlgorithmManagerError::AlgorithmCreationFailed, msg);
         QDiffResult failResult(msg);
+        m_isCalculating = false;
         emit calculationFinished(failResult);
         return failResult;
     }
 
     QDiffResult result = algorithm->calculateDiff(leftText, rightText);
+    m_isCalculating = false;
 
     if (!result.success()) {
         setLastError(QAlgorithmManagerError::DiffExecutionFailed);
@@ -337,6 +345,10 @@ QStringList QAlgorithmManager::getAlgorithmConfigurationKeys(const QString& algo
 {
     auto& registry = QAlgorithmRegistry::get_Instance();
     return registry.getAlgorithmConfigurationKeys(algorithmId);
+}
+
+QStringList QAlgorithmManager::getAvailableAlgorithms() const {
+    return QAlgorithmRegistry::get_Instance().getAvailableAlgorithms();
 }
 
 }//namespace QDiffX
