@@ -1,0 +1,404 @@
+name: Qt Build & Test
+
+on:
+  push:
+    branches: [dev, main, master]
+    tags: ['v*']
+  pull_request:
+    branches: [dev, main, master]
+  workflow_dispatch:  # Allow manual triggering
+    inputs:
+      qt_version:
+        description: 'Qt version to use'
+        required: false
+        default: ''
+      force_version:
+        description: 'Force specific Qt version (bypass auto-detection)'
+        required: false
+        default: 'false'
+        type: boolean
+
+env:
+  CMAKE_BUILD_TYPE: Release
+
+jobs:
+  determine-qt-version:
+    name: Determine Qt Version
+    runs-on: ubuntu-latest
+    outputs:
+      qt_version: ${{ steps.qt-version.outputs.version }}
+      
+    steps:
+    - name: Determine Qt Version
+      id: qt-version
+      run: |
+        # Priority order for Qt version selection:
+        # 1. Manual input (if provided)
+        # 2. Try to detect latest available
+        # 3. Use known working versions as fallback
+        
+        if [ "${{ github.event.inputs.force_version }}" == "true" ] && [ -n "${{ github.event.inputs.qt_version }}" ]; then
+          echo "version=${{ github.event.inputs.qt_version }}" >> $GITHUB_OUTPUT
+          echo "Using forced Qt version: ${{ github.event.inputs.qt_version }}"
+          exit 0
+        fi
+        
+        # Install aqt to test available versions
+        python -m pip install aqtinstall
+        
+        # Test known working versions in order of preference
+        # These are versions that are known to work with current aqtinstall
+        CANDIDATE_VERSIONS=(
+          "6.7.3"    # LTS - most stable
+          "6.8.0"    # First 6.8 release
+          "6.8.1"    # 6.8 patch
+          "6.7.2"    # Earlier LTS
+          "6.7.1"    # Even earlier LTS
+          "6.6.3"    # Previous LTS
+        )
+        
+        if [ -n "${{ github.event.inputs.qt_version }}" ]; then
+          # If user specified a version, test it first
+          CANDIDATE_VERSIONS=("${{ github.event.inputs.qt_version }}" "${CANDIDATE_VERSIONS[@]}")
+        fi
+        
+        for version in "${CANDIDATE_VERSIONS[@]}"; do
+          echo "Testing Qt version: $version"
+          
+          # Test if this version is available by checking if we can list its architectures
+          if python -m aqt list-qt linux desktop --arch "$version" 2>/dev/null | grep -q "gcc_64"; then
+            echo "version=$version" >> $GITHUB_OUTPUT
+            echo "Found working Qt version: $version"
+            exit 0
+          else
+            echo "Qt version $version not available or has issues"
+          fi
+        done
+        
+        # If all else fails, use the most stable known version
+        echo "version=6.7.3" >> $GITHUB_OUTPUT
+        echo "Using fallback Qt version: 6.7.3"
+
+  build:
+    name: Build on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    needs: determine-qt-version
+    
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        include:
+          - os: ubuntu-latest
+            qt_arch: linux_gcc_64
+            qt_host: linux
+            cmake_generator: "Unix Makefiles"
+            artifact_name: "linux-x64"
+          - os: windows-latest
+            qt_arch: win64_msvc2019_64
+            qt_host: windows
+            cmake_generator: "Visual Studio 17 2022"
+            artifact_name: "windows-x64"
+          - os: macos-latest
+            qt_arch: clang_64
+            qt_host: mac
+            cmake_generator: "Unix Makefiles"
+            artifact_name: "macos-x64"
+
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Cache Qt Installation
+      id: cache-qt
+      uses: actions/cache@v4
+      with:
+        path: ../Qt
+        key: ${{ runner.os }}-Qt-${{ needs.determine-qt-version.outputs.qt_version }}-${{ matrix.qt_arch }}-v2
+
+    - name: Install Qt (Primary Method)
+      id: install-qt-primary
+      uses: jurplel/install-qt-action@v4
+      continue-on-error: true
+      with:
+        version: ${{ needs.determine-qt-version.outputs.qt_version }}
+        host: ${{ matrix.qt_host }}
+        target: desktop
+        arch: ${{ matrix.qt_arch }}
+        cache: true
+        cache-key-prefix: ${{ runner.os }}-Qt-${{ needs.determine-qt-version.outputs.qt_version }}
+        modules: 'qtbase qttools qtdeclarative qtsvg qtimageformats'
+    - name: Install Qt (Fallback Method - Minimal Modules)
+      id: install-qt-fallback
+      if: steps.install-qt-primary.outcome == 'failure'
+      uses: jurplel/install-qt-action@v4
+      continue-on-error: true
+      with:
+        version: ${{ needs.determine-qt-version.outputs.qt_version }}
+        host: ${{ matrix.qt_host }}
+        target: desktop
+        arch: ${{ matrix.qt_arch }}
+        cache: true
+        cache-key-prefix: ${{ runner.os }}-Qt-${{ needs.determine-qt-version.outputs.qt_version }}-minimal
+        # Try with minimal modules
+        modules: 'qtbase'
+    - name: Install Qt (Last Resort - No Modules)
+      id: install-qt-last-resort
+      if: steps.install-qt-primary.outcome == 'failure' && steps.install-qt-fallback.outcome == 'failure'
+      uses: jurplel/install-qt-action@v4
+      with:
+        version: ${{ needs.determine-qt-version.outputs.qt_version }}
+        host: ${{ matrix.qt_host }}
+        target: desktop
+        arch: ${{ matrix.qt_arch }}
+        cache: true
+        cache-key-prefix: ${{ runner.os }}-Qt-${{ needs.determine-qt-version.outputs.qt_version }}-basic
+        # No modules specified - use default
+
+    - name: Verify Qt Installation
+      run: |
+        echo "Qt installation verification:"
+        echo "CMAKE_PREFIX_PATH: $CMAKE_PREFIX_PATH"
+        echo "Qt6_DIR: $Qt6_DIR"
+        echo "QT_ROOT_DIR: $QT_ROOT_DIR"
+        
+        # Try to find Qt installation
+        if command -v qmake &> /dev/null; then
+          echo "qmake found: $(which qmake)"
+          qmake --version
+        else
+          echo "qmake not found in PATH"
+        fi
+        
+        # Look for Qt CMake files
+        find ${{ github.workspace }}/.. -name "Qt6Config.cmake" -o -name "qt6-config.cmake" 2>/dev/null | head -5 || echo "No Qt CMake files found"
+      shell: bash
+
+    - name: Install System Dependencies (Linux)
+      if: runner.os == 'Linux'
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y \
+          build-essential \
+          cmake \
+          ninja-build \
+          libgl1-mesa-dev \
+          libxkbcommon-x11-0 \
+          libxcb-icccm4 \
+          libxcb-image0 \
+          libxcb-keysyms1 \
+          libxcb-render-util0 \
+          libxcb-xinerama0 \
+          libxcb-xinput0 \
+          libfontconfig1-dev \
+          libfreetype6-dev \
+          libx11-dev \
+          libx11-xcb-dev \
+          libxext-dev \
+          libxfixes-dev \
+          libxi-dev \
+          libxrender-dev \
+          libxcb1-dev \
+          libxcb-glx0-dev \
+          libxcb-util0-dev
+
+    - name: Install System Dependencies (Windows)
+      if: runner.os == 'Windows'
+      run: |
+        choco install ninja
+
+    - name: Install System Dependencies (macOS)
+      if: runner.os == 'macOS'
+      run: |
+        brew install ninja cmake
+
+    - name: Setup MSVC (Windows)
+      if: runner.os == 'Windows'
+      uses: microsoft/setup-msbuild@v2
+
+    - name: Configure CMake
+      run: |
+        # Try multiple Qt paths for better compatibility
+        QT_PATHS=""
+        if [ -n "$CMAKE_PREFIX_PATH" ]; then
+          QT_PATHS="$CMAKE_PREFIX_PATH"
+        fi
+        if [ -n "$Qt6_DIR" ]; then
+          QT_PATHS="$QT_PATHS;$Qt6_DIR"
+        fi
+        if [ -n "$QT_ROOT_DIR" ]; then
+          QT_PATHS="$QT_PATHS;$QT_ROOT_DIR"
+        fi
+        
+        echo "Using Qt paths: $QT_PATHS"
+        
+        cmake -B build -S . \
+          -DCMAKE_BUILD_TYPE=${{ env.CMAKE_BUILD_TYPE }} \
+          -DCMAKE_PREFIX_PATH="$QT_PATHS" \
+          -DCMAKE_INSTALL_PREFIX="${{ github.workspace }}/install" \
+          -DBUILD_TESTING=ON \
+          -DBUILD_EXAMPLES=ON \
+          -DBUILD_SHARED_LIBS=ON \
+          -G "${{ matrix.cmake_generator }}"
+      shell: bash
+
+    - name: Build Project
+      run: |
+        cmake --build build --config ${{ env.CMAKE_BUILD_TYPE }} --parallel 4
+
+    - name: Run Tests
+      run: |
+        cd build
+        if ctest --show-only 2>/dev/null | grep -q "Test #"; then
+          echo "Running tests..."
+          ctest --output-on-failure --parallel 4 --build-config ${{ env.CMAKE_BUILD_TYPE }}
+        else
+          echo "No tests configured, skipping test execution"
+        fi
+      shell: bash
+
+    - name: Install Project
+      run: |
+        cmake --install build --config ${{ env.CMAKE_BUILD_TYPE }}
+
+    - name: Package Artifacts
+      run: |
+        cd install
+        if [ "${{ runner.os }}" == "Windows" ]; then
+          7z a -r ../QDiffX-${{ matrix.artifact_name }}.zip .
+        else
+          tar czf ../QDiffX-${{ matrix.artifact_name }}.tar.gz .
+        fi
+      shell: bash
+
+    - name: Upload Build Artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: QDiffX-${{ matrix.artifact_name }}
+        path: |
+          QDiffX-${{ matrix.artifact_name }}.*
+        retention-days: 30
+
+  static-analysis:
+    name: Static Analysis
+    runs-on: ubuntu-latest
+    needs: determine-qt-version
+    
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v4
+
+    - name: Install Analysis Tools
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y cppcheck clang-tidy
+
+    - name: Install Qt
+      uses: jurplel/install-qt-action@v4
+      continue-on-error: true
+      with:
+        version: ${{ needs.determine-qt-version.outputs.qt_version }}
+        host: linux
+        target: desktop
+        arch: gcc_64
+        cache: true
+        modules: 'qtbase qttools'
+
+    - name: Run CPPCheck
+      run: |
+        if [ -d "src" ] || [ -d "include" ]; then
+          cppcheck --enable=all \
+            --inconclusive \
+            --xml \
+            --xml-version=2 \
+            --suppress=missingIncludeSystem \
+            --suppress=unusedFunction \
+            --suppress=unmatchedSuppression \
+            --inline-suppr \
+            src/ include/ 2> cppcheck.xml || true
+        else
+          echo "No src/ or include/ directories found, skipping CPPCheck"
+          echo "No analysis performed - missing source directories" > cppcheck.xml
+        fi
+
+    - name: Configure for Clang-Tidy
+      run: |
+        if [ -f "CMakeLists.txt" ]; then
+          cmake -B build -S . \
+            -DCMAKE_BUILD_TYPE=Debug \
+            -DCMAKE_PREFIX_PATH="${{ env.CMAKE_PREFIX_PATH }}" \
+            -DCMAKE_EXPORT_COMPILE_COMMANDS=ON || true
+        fi
+
+    - name: Run Clang-Tidy
+      run: |
+        if [ -f "build/compile_commands.json" ] && ([ -d "src" ] || [ -d "include" ]); then
+          find src/ include/ -name "*.cpp" -o -name "*.h" 2>/dev/null | \
+          xargs clang-tidy -p build --checks="-*,readability-*,performance-*,modernize-*,bugprone-*" > clang-tidy.txt 2>&1 || true
+        else
+          echo "No compile commands or source files found, skipping Clang-Tidy"
+          echo "No analysis performed - missing compile commands or source files" > clang-tidy.txt
+        fi
+
+    - name: Upload Analysis Results
+      uses: actions/upload-artifact@v4
+      with:
+        name: static-analysis-results
+        path: |
+          cppcheck.xml
+          clang-tidy.txt
+        retention-days: 30
+
+  documentation:
+    name: Generate Documentation
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v4
+
+    - name: Install Doxygen
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y doxygen graphviz
+
+    - name: Generate Documentation
+      run: |
+        if [ -f "Doxyfile" ]; then
+          doxygen Doxyfile
+        else
+          echo "Doxyfile not found, skipping documentation generation"
+        fi
+
+    - name: Deploy Documentation (on main branch)
+      if: github.ref == 'refs/heads/main' && hashFiles('docs/html/**') != ''
+      uses: peaceiris/actions-gh-pages@v3
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        publish_dir: ./docs/html
+
+  release:
+    name: Create Release
+    runs-on: ubuntu-latest
+    needs: [build, static-analysis]
+    if: startsWith(github.ref, 'refs/tags/v')
+    
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v4
+
+    - name: Download All Artifacts
+      uses: actions/download-artifact@v4
+
+    - name: Create Release
+      uses: softprops/action-gh-release@v1
+      with:
+        files: |
+          QDiffX-*/QDiffX-*.*
+        generate_release_notes: true
+        draft: false
+        prerelease: ${{ contains(github.ref, 'alpha') || contains(github.ref, 'beta') || contains(github.ref, 'rc') }}
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
