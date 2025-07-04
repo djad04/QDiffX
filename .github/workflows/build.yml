@@ -242,6 +242,7 @@ jobs:
           -DBUILD_EXAMPLES=ON \
           -DBUILD_SHARED_LIBS=ON \
           -G "${{ matrix.cmake_generator }}"
+      shell: bash
 
     - name: Build Project
       run: |
