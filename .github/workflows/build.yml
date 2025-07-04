@@ -1,0 +1,275 @@
+name: Qt Build & Test
+
+on:
+  push:
+    branches: [dev, main, master]
+    tags: ['v*']
+  pull_request:
+    branches: [dev, main, master]
+  workflow_dispatch:  # Allow manual triggering
+
+env:
+  QT_VERSION: '6.8.2'
+  CMAKE_BUILD_TYPE: Release
+
+jobs:
+  build:
+    name: Build on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    
+    strategy:
+      fail-fast: false  # Continue other builds if one fails
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        include:
+          - os: ubuntu-latest
+            qt_arch: gcc_64
+            qt_host: linux
+            cmake_generator: "Unix Makefiles"
+            artifact_name: "linux-x64"
+          - os: windows-latest
+            qt_arch: win64_msvc2022_64
+            qt_host: windows
+            cmake_generator: "Visual Studio 17 2022"
+            artifact_name: "windows-x64"
+          - os: macos-latest
+            qt_arch: macos
+            qt_host: mac
+            cmake_generator: "Unix Makefiles"
+            artifact_name: "macos-x64"
+
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0  # Full history for proper versioning
+
+    - name: Cache Qt Installation
+      id: cache-qt
+      uses: actions/cache@v4
+      with:
+        path: ../Qt
+        key: ${{ runner.os }}-Qt-${{ env.QT_VERSION }}-${{ matrix.qt_arch }}
+
+    - name: Install Qt
+      uses: jurplel/install-qt-action@v4
+      with:
+        version: ${{ env.QT_VERSION }}
+        host: ${{ matrix.qt_host }}
+        target: desktop
+        arch: ${{ matrix.qt_arch }}
+        cache: true
+        cache-key-prefix: ${{ runner.os }}-Qt-${{ env.QT_VERSION }}
+
+    - name: Install System Dependencies (Linux)
+      if: runner.os == 'Linux'
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y \
+          build-essential \
+          cmake \
+          ninja-build \
+          libgl1-mesa-dev \
+          libxkbcommon-x11-0 \
+          libxcb-icccm4 \
+          libxcb-image0 \
+          libxcb-keysyms1 \
+          libxcb-render-util0 \
+          libxcb-xinerama0 \
+          libxcb-xinput0 \
+          libxcb-xfixes0 \
+          libegl1-mesa-dev \
+          libfontconfig1-dev \
+          libfreetype6-dev \
+          libx11-dev \
+          libx11-xcb-dev \
+          libxext-dev \
+          libxfixes-dev \
+          libxi-dev \
+          libxrender-dev \
+          libxcb1-dev \
+          libxcb-glx0-dev \
+          libxcb-util0-dev \
+          libxcb-cursor-dev \
+          libxcb-shape0-dev \
+          libxcb-sync-dev \
+          libxcb-xfixes0-dev \
+          libxcb-xkb-dev \
+          libxcb-randr0-dev \
+          libxcb-render0-dev \
+          libxcb-shm0-dev \
+          libxcb-xtest0-dev \
+          libxcb-dri3-dev \
+          libxcb-present-dev \
+          libxcb-composite0-dev \
+          libxcb-damage0-dev \
+          libxcb-dpms0-dev \
+          libxcb-record0-dev \
+          libxcb-res0-dev \
+          libxcb-screensaver0-dev \
+          libxcb-xv0-dev \
+          libxcb-xvmc0-dev
+
+    - name: Install System Dependencies (Windows)
+      if: runner.os == 'Windows'
+      run: |
+        choco install ninja
+
+    - name: Install System Dependencies (macOS)
+      if: runner.os == 'macOS'
+      run: |
+        brew install ninja cmake
+
+    - name: Setup MSVC (Windows)
+      if: runner.os == 'Windows'
+      uses: microsoft/setup-msbuild@v2
+
+    - name: Configure CMake
+      run: |
+        cmake -B build -S . \
+          -DCMAKE_BUILD_TYPE=${{ env.CMAKE_BUILD_TYPE }} \
+          -DCMAKE_PREFIX_PATH="${{ env.Qt6_DIR }}" \
+          -DCMAKE_INSTALL_PREFIX="${{ github.workspace }}/install" \
+          -DBUILD_TESTING=ON \
+          -DBUILD_EXAMPLES=ON \
+          -DBUILD_SHARED_LIBS=ON \
+          -G "${{ matrix.cmake_generator }}"
+
+    - name: Build Project
+      run: |
+        cmake --build build --config ${{ env.CMAKE_BUILD_TYPE }} --parallel 4
+
+    - name: Run Tests
+      run: |
+        cd build
+        if ctest --show-only 2>/dev/null | grep -q "Test #"; then
+          echo "Running tests..."
+          ctest --output-on-failure --parallel 4 --build-config ${{ env.CMAKE_BUILD_TYPE }}
+        else
+          echo "No tests configured, skipping test execution"
+        fi
+
+    - name: Install Project
+      run: |
+        cmake --install build --config ${{ env.CMAKE_BUILD_TYPE }}
+
+    - name: Package Artifacts
+      run: |
+        cd install
+        if [ "${{ runner.os }}" == "Windows" ]; then
+          7z a -r ../QDiffX-${{ matrix.artifact_name }}.zip .
+        else
+          tar czf ../QDiffX-${{ matrix.artifact_name }}.tar.gz .
+        fi
+      shell: bash
+
+    - name: Upload Build Artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: QDiffX-${{ matrix.artifact_name }}
+        path: |
+          QDiffX-${{ matrix.artifact_name }}.*
+        retention-days: 30
+
+  static-analysis:
+    name: Static Analysis
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v4
+
+    - name: Install Analysis Tools
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y cppcheck clang-tidy
+
+    - name: Install Qt
+      uses: jurplel/install-qt-action@v4
+      with:
+        version: ${{ env.QT_VERSION }}
+        host: linux
+        target: desktop
+        arch: gcc_64
+        cache: true
+
+    - name: Run CPPCheck
+      run: |
+        cppcheck --enable=all \
+          --inconclusive \
+          --xml \
+          --xml-version=2 \
+          --suppress=missingIncludeSystem \
+          --suppress=unusedFunction \
+          --suppress=unmatchedSuppression \
+          --inline-suppr \
+          src/ include/ 2> cppcheck.xml
+
+    - name: Configure for Clang-Tidy
+      run: |
+        cmake -B build -S . \
+          -DCMAKE_BUILD_TYPE=Debug \
+          -DCMAKE_PREFIX_PATH="${{ env.Qt6_DIR }}" \
+          -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+
+    - name: Run Clang-Tidy
+      run: |
+        find src/ include/ -name "*.cpp" -o -name "*.h" | \
+        xargs clang-tidy -p build --checks="-*,readability-*,performance-*,modernize-*,bugprone-*" > clang-tidy.txt 2>&1 || true
+
+    - name: Upload Analysis Results
+      uses: actions/upload-artifact@v4
+      with:
+        name: static-analysis-results
+        path: |
+          cppcheck.xml
+          clang-tidy.txt
+        retention-days: 30
+
+  documentation:
+    name: Generate Documentation
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v4
+
+    - name: Install Doxygen
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y doxygen graphviz
+
+    - name: Generate Documentation
+      run: |
+        doxygen Doxyfile
+
+    - name: Deploy Documentation (on main branch)
+      if: github.ref == 'refs/heads/main'
+      uses: peaceiris/actions-gh-pages@v3
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        publish_dir: ./docs/html
+
+  release:
+    name: Create Release
+    runs-on: ubuntu-latest
+    needs: [build, static-analysis]
+    if: startsWith(github.ref, 'refs/tags/v')
+    
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v4
+
+    - name: Download All Artifacts
+      uses: actions/download-artifact@v4
+
+    - name: Create Release
+      uses: softprops/action-gh-release@v1
+      with:
+        files: |
+          QDiffX-*/QDiffX-*.*
+        generate_release_notes: true
+        draft: false
+        prerelease: ${{ contains(github.ref, 'alpha') || contains(github.ref, 'beta') || contains(github.ref, 'rc') }}
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
