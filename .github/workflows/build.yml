@@ -129,7 +129,7 @@ jobs:
         arch: ${{ matrix.qt_arch }}
         cache: true
         cache-key-prefix: ${{ runner.os }}-Qt-${{ needs.determine-qt-version.outputs.qt_version }}
-        modules: 'qtbase qttools qtdeclarative qtsvg qtimageformats'
+        modules: 'qttools qtdeclarative qtsvg qtimageformats'
 
     - name: Install Qt (Fallback Method - Minimal Modules)
       id: install-qt-fallback
@@ -144,7 +144,7 @@ jobs:
         cache: true
         cache-key-prefix: ${{ runner.os }}-Qt-${{ needs.determine-qt-version.outputs.qt_version }}-minimal
         # Try with minimal modules
-        modules: 'qtbase'
+        modules: ''
 
     - name: Install Qt (Last Resort - No Modules)
       id: install-qt-last-resort
