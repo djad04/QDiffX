@@ -9,7 +9,7 @@ on:
   workflow_dispatch:  # Allow manual triggering
 
 env:
-  QT_VERSION: '6.8.2'
+  QT_VERSION: '6.9.1'
   CMAKE_BUILD_TYPE: Release
 
 jobs:
