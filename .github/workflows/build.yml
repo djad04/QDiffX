@@ -90,12 +90,12 @@ jobs:
         os: [ubuntu-latest, windows-latest, macos-latest]
         include:
           - os: ubuntu-latest
-            qt_arch: gcc_64
+            qt_arch: linux_gcc_64
             qt_host: linux
             cmake_generator: "Unix Makefiles"
             artifact_name: "linux-x64"
           - os: windows-latest
-            qt_arch: win64_msvc2022_64
+            qt_arch: win64_msvc2019_64
             qt_host: windows
             cmake_generator: "Visual Studio 17 2022"
             artifact_name: "windows-x64"
@@ -129,7 +129,7 @@ jobs:
         arch: ${{ matrix.qt_arch }}
         cache: true
         cache-key-prefix: ${{ runner.os }}-Qt-${{ needs.determine-qt-version.outputs.qt_version }}
-        modules: 'qttools qtdeclarative qtsvg qtimageformats'
+        modules: 'qtbase qttools qtdeclarative qtsvg qtimageformats'
     - name: Install Qt (Fallback Method - Minimal Modules)
       id: install-qt-fallback
       if: steps.install-qt-primary.outcome == 'failure'
@@ -143,7 +143,7 @@ jobs:
         cache: true
         cache-key-prefix: ${{ runner.os }}-Qt-${{ needs.determine-qt-version.outputs.qt_version }}-minimal
         # Try with minimal modules
-        modules: '' 
+        modules: 'qtbase'
     - name: Install Qt (Last Resort - No Modules)
       id: install-qt-last-resort
       if: steps.install-qt-primary.outcome == 'failure' && steps.install-qt-fallback.outcome == 'failure'
