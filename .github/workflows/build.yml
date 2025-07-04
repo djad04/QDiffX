@@ -257,6 +257,7 @@ jobs:
         else
           echo "No tests configured, skipping test execution"
         fi
+      shell: bash
 
     - name: Install Project
       run: |
