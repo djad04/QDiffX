@@ -14,7 +14,7 @@ QAlgorithmRegistry &QAlgorithmRegistry::get_Instance()
 QAlgorithmRegistry::QAlgorithmRegistry()
 {
     initializeDefaultAlgorithms();
-    // Initialize config maps for each algorithm with their default config
+    QMutexLocker locker(&m_mutex);
     for (auto it = m_algorithms.begin(); it != m_algorithms.end(); ++it) {
         if (it.value().factory) {
             std::unique_ptr<QDiffAlgorithm> algo = it.value().factory();
@@ -34,7 +34,7 @@ void QAlgorithmRegistry::initializeDefaultAlgorithms()
     dtlInfo.description = dtl.getDescription();
     dtlInfo.capabilities = dtl.getCapabilities();
     dtlInfo.factory = []() { return std::make_unique<DTLAlgorithm>(); };
-    registerAlgorithm("dtl", dtlInfo);
+    registerAlgorithmInternal("dtl", dtlInfo);
 
     // Register DMP Algorithm
     DMPAlgorithm dmp;
@@ -43,36 +43,40 @@ void QAlgorithmRegistry::initializeDefaultAlgorithms()
     dmpInfo.description = dmp.getDescription();
     dmpInfo.capabilities = dmp.getCapabilities();
     dmpInfo.factory = []() { return std::make_unique<DMPAlgorithm>(); };
-    registerAlgorithm("dmp", dmpInfo);
+    registerAlgorithmInternal("dmp", dmpInfo);
 }
 
 bool QAlgorithmRegistry::registerAlgorithm(const QString &algorithmId, const QAlgorithmInfo &info)
 {
-    {
-        QMutexLocker locker(&m_mutex);
-        if (algorithmId.isEmpty()) {
-            if (m_errorOutputEnabled) qWarning() << "QAlgorithmRegistry::registerAlgorithm: Empty algorithm ID provided";
-            setLastError(QAlgorithmRegistryError::EmptyAlgorithmId);
-            emit errorOccurred(QAlgorithmRegistryError::EmptyAlgorithmId, errorMessage(QAlgorithmRegistryError::EmptyAlgorithmId));
-            return false;
-        }
-        if (m_algorithms.contains(algorithmId)) {
-            if (m_errorOutputEnabled) qWarning() << "QAlgorithmRegistry::registerAlgorithm: Algorithm already registered:" << algorithmId;
-            setLastError(QAlgorithmRegistryError::AlgorithmAlreadyRegistered);
-            emit errorOccurred(QAlgorithmRegistryError::AlgorithmAlreadyRegistered, errorMessage(QAlgorithmRegistryError::AlgorithmAlreadyRegistered) + ": " + algorithmId);
-            return false;
-        }
-        if (!info.factory) {
-            if (m_errorOutputEnabled) qWarning() << "QAlgorithmRegistry::registerAlgorithm: No factory function provided for algorithm:" << algorithmId;
-            setLastError(QAlgorithmRegistryError::InvalidFactory);
-            emit errorOccurred(QAlgorithmRegistryError::InvalidFactory, errorMessage(QAlgorithmRegistryError::InvalidFactory) + ": " + algorithmId);
-            return false;
-        }
-        m_algorithms[algorithmId] = info;
+    QMutexLocker locker(&m_mutex);
+   return registerAlgorithmInternal(algorithmId, info);
+}
+
+// DOES NOT ACQUIRE MUTEX (assumes caller has locked)
+bool QAlgorithmRegistry::registerAlgorithmInternal(const QString &algorithmId, const QAlgorithmInfo &info)
+{
+    if (algorithmId.isEmpty()) {
+        if (m_errorOutputEnabled) qWarning() << "QAlgorithmRegistry::registerAlgorithm: Empty algorithm ID provided";
+        setLastError(QAlgorithmRegistryError::EmptyAlgorithmId);
+        emit errorOccurred(QAlgorithmRegistryError::EmptyAlgorithmId, errorMessage(QAlgorithmRegistryError::EmptyAlgorithmId));
+        return false;
     }
+    if (m_algorithms.contains(algorithmId)) {
+        if (m_errorOutputEnabled) qWarning() << "QAlgorithmRegistry::registerAlgorithm: Algorithm already registered:" << algorithmId;
+        setLastError(QAlgorithmRegistryError::AlgorithmAlreadyRegistered);
+        emit errorOccurred(QAlgorithmRegistryError::AlgorithmAlreadyRegistered, errorMessage(QAlgorithmRegistryError::AlgorithmAlreadyRegistered) + ": " + algorithmId);
+        return false;
+    }
+    if (!info.factory) {
+        if (m_errorOutputEnabled) qWarning() << "QAlgorithmRegistry::registerAlgorithm: No factory function provided for algorithm:" << algorithmId;
+        setLastError(QAlgorithmRegistryError::InvalidFactory);
+        emit errorOccurred(QAlgorithmRegistryError::InvalidFactory, errorMessage(QAlgorithmRegistryError::InvalidFactory) + ": " + algorithmId);
+        return false;
+    }
+    m_algorithms[algorithmId] = info;
     emit algorithmRegistered(algorithmId);
     emit algorithmAvailabilityChanged(algorithmId, true);
-    emit algorithmsChanged(getAvailableAlgorithms());
+    emit algorithmsChanged(internalGetAvailableAlgorithms());
     qDebug() << "QAlgorithmRegistry: Registered algorithm " << algorithmId << "(" << info.name << ")";
     setLastError(QAlgorithmRegistryError::None);
     return true;
@@ -80,34 +84,38 @@ bool QAlgorithmRegistry::registerAlgorithm(const QString &algorithmId, const QAl
 
 bool QAlgorithmRegistry::unregisterAlgorithm(const QString &algorithmId)
 {
-    {
-        QMutexLocker locker(&m_mutex);
-        if (algorithmId.isEmpty()) {
-            if (m_errorOutputEnabled) qWarning() << "QAlgorithmRegistry::unregisterAlgorithm: Empty algorithm ID provided";
-            setLastError(QAlgorithmRegistryError::EmptyAlgorithmId);
-            emit errorOccurred(QAlgorithmRegistryError::EmptyAlgorithmId, errorMessage(QAlgorithmRegistryError::EmptyAlgorithmId));
-            return false;
-        }
-        if (!m_algorithms.contains(algorithmId)) {
-            if (m_errorOutputEnabled) qWarning() << "QAlgorithmRegistry::unregisterAlgorithm: Algorithm not registered:" << algorithmId;
-            setLastError(QAlgorithmRegistryError::AlgorithmNotFound);
-            emit errorOccurred(QAlgorithmRegistryError::AlgorithmNotFound, errorMessage(QAlgorithmRegistryError::AlgorithmNotFound) + ": " + algorithmId);
-            return false;
-        }
-        m_algorithms.remove(algorithmId);
+    QMutexLocker locker(&m_mutex); // Mutex acquired for the entire operation
+    if (algorithmId.isEmpty()) {
+        if (m_errorOutputEnabled) qWarning() << "QAlgorithmRegistry::unregisterAlgorithm: Empty algorithm ID provided";
+        setLastError(QAlgorithmRegistryError::EmptyAlgorithmId);
+        emit errorOccurred(QAlgorithmRegistryError::EmptyAlgorithmId, errorMessage(QAlgorithmRegistryError::EmptyAlgorithmId));
+        return false;
     }
+    if (!m_algorithms.contains(algorithmId)) {
+        if (m_errorOutputEnabled) qWarning() << "QAlgorithmRegistry::unregisterAlgorithm: Algorithm not registered:" << algorithmId;
+        setLastError(QAlgorithmRegistryError::AlgorithmNotFound);
+        emit errorOccurred(QAlgorithmRegistryError::AlgorithmNotFound, errorMessage(QAlgorithmRegistryError::AlgorithmNotFound) + ": " + algorithmId);
+        return false;
+    }
+    m_algorithms.remove(algorithmId);
     emit algorithmUnregistered(algorithmId);
     emit algorithmAvailabilityChanged(algorithmId, false);
-    emit algorithmsChanged(getAvailableAlgorithms());
+    emit algorithmsChanged(internalGetAvailableAlgorithms()); // Call internal helper
     qDebug() << "QAlgorithmRegistry: unregistered algorithm" << algorithmId;
     setLastError(QAlgorithmRegistryError::None);
     return true;
 }
 
+// Public accessor for available algorithms (acquires mutex)
 QStringList QAlgorithmRegistry::getAvailableAlgorithms() const
 {
     QMutexLocker locker(&m_mutex);
-    setLastError(QAlgorithmRegistryError::None);
+    return internalGetAvailableAlgorithms(); // Call the internal helper
+}
+
+// New internal helper for getting available algorithms (assumes caller holds mutex)
+QStringList QAlgorithmRegistry::internalGetAvailableAlgorithms() const
+{
     return m_algorithms.keys();
 }
 
@@ -144,11 +152,14 @@ bool QAlgorithmRegistry::isAlgorithmAvailable(const QString &algorithmId) const
 
 void QAlgorithmRegistry::clear()
 {
-    QMutexLocker locker(&m_mutex);
+    QMutexLocker locker(&m_mutex); // Mutex acquired for the entire clear operation
     m_algorithms.clear();
+    // Re-initialize default algorithms *within* the locked context,
+    // safe because initializeDefaultAlgorithms calls registerAlgorithmInternal which doesn't lock
+    initializeDefaultAlgorithms();
     emit registryCleared();
-    emit algorithmsChanged(QStringList());
-    setLastError(QAlgorithmRegistryError::None);
+    emit algorithmsChanged(internalGetAvailableAlgorithms()); // Call internal helper
+    setLastError(QAlgorithmRegistryError::None); // Ensure error state is None after clear and re-init
 }
 
 int QAlgorithmRegistry::getAlgorithmCount()
