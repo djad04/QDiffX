@@ -104,7 +104,11 @@ QDiffResult QAlgorithmManager::calculateDiffSync(const QString &leftText, const 
     } else {
         algorithm = autoSelectAlgorithm(leftText, rightText);
     }
-    return executeAlgorithm(algorithm, leftText, rightText);
+    QDiffResult result = executeAlgorithm(algorithm, leftText, rightText);
+    if (result.success()) {
+        emit diffCalculated(result);
+    }
+    return result;
 }
 
 QDiffResult QAlgorithmManager::calculateDiffWithAlgorithm(const QString &algorithmId, const QString &leftText, const QString &rightText)
