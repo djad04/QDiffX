@@ -35,8 +35,7 @@
 
 /* If you use this library, you must include dtl.hpp only. */
 
-#ifndef DTL_SEQUENCE_H
-#define DTL_SEQUENCE_H
+#pragma once
 
 namespace dtl {
     
@@ -61,5 +60,3 @@ namespace dtl {
         elemVec sequence;
     };
 }
-
-#endif // DTL_SEQUENCE_H

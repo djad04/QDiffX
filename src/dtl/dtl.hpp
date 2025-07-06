@@ -33,8 +33,7 @@
    SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#ifndef DTL_H
-#define DTL_H
+#pragma once
 
 #include "variables.hpp"
 #include "functors.hpp"
@@ -43,5 +42,3 @@
 #include "Ses.hpp"
 #include "Diff.hpp"
 #include "Diff3.hpp"
-
-#endif // DTL_H

@@ -35,8 +35,7 @@
 
 /* If you use this library, you must include dtl.hpp only. */
 
-#ifndef DTL_LCS_H
-#define DTL_LCS_H
+#pragma once
 
 namespace dtl {
     
@@ -51,5 +50,3 @@ namespace dtl {
         ~Lcs () {}
     };
 }
-
-#endif // DTL_LCS_H
