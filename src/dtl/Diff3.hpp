@@ -35,8 +35,7 @@
 
 /* If you use this library, you must include dtl.hpp only. */
 
-#ifndef DTL_DIFF3_H
-#define DTL_DIFF3_H
+#pragma once
 
 namespace dtl {
     
@@ -242,4 +241,4 @@ namespace dtl {
     };
 }
 
-#endif // DTL_DIFF3_H
+

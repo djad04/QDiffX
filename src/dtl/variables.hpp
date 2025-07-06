@@ -35,8 +35,7 @@
 
 /* If you use this library, you must include dtl.hpp only. */
 
-#ifndef DTL_VARIABLES_H
-#define DTL_VARIABLES_H
+#pragma once
 
 #include <vector>
 #include <list>
@@ -139,4 +138,4 @@ namespace dtl {
 
 } 
 
-#endif // DTL_VARIABLES_H
+

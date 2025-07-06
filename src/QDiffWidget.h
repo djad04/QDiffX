@@ -1,9 +1,11 @@
-#ifndef QDIFFWIDGET_H
-#define QDIFFWIDGET_H
+#pragma once
 
 #include <QSplitter>
 #include <QTextBrowser>
 #include <QWidget>
+
+namespace QDiffX {
+
 
 class QDiffWidget : public QWidget
 {
@@ -81,4 +83,5 @@ private:
     FileOperationResult m_lastError = FileOperationResult::Success;
 
 };
-#endif // QDIFFWIDGET_H
+
+}//namespace QDiffX
