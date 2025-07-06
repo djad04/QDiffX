@@ -316,10 +316,12 @@ QDiffResult QAlgorithmManager::executeAlgorithm(const QString& algorithmId, cons
 }
 
 void QAlgorithmManager::resetManager() {
-    setSelectionMode(QAlgorithmSelectionMode::Auto);
-    setExecutionMode(QExecutionMode::Synchronous);
+    setSelectionMode(QDiffX::QAlgorithmSelectionMode::Auto);
+    setExecutionMode(QDiffX::QExecutionMode::Synchronous);
     setCurrentAlgorithm(DEFAULT_ALGORITHM);
     setFallBackAlgorithm(DEFAULT_FALLBACK);
+    setErrorOutputEnabled(false);
+    setLastError(QAlgorithmManagerError::None);
     emit managerReset();
 }
 
