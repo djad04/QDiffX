@@ -35,8 +35,7 @@
 
 /* If you use this library, you must include dtl.hpp only. */
 
-#ifndef DTL_FUNCTORS_H
-#define DTL_FUNCTORS_H
+#pragma once
 
 namespace dtl {
     
@@ -148,4 +147,4 @@ namespace dtl {
     };
 }
 
-#endif // DTL_FUNCTORS_H
+
