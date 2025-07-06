@@ -32,8 +32,8 @@ struct QAlgorithmInfo{
 class QAlgorithmRegistry : public QObject
 {
     Q_OBJECT
-    Q_PROPERTY(QStringList availableAlgorithms READ getAvailableAlgorithms NOTIFY algorithmsChanged)
-    Q_PROPERTY(int algorithmCount READ getAlgorithmCount NOTIFY algorithmsChanged)
+    Q_PROPERTY(QStringList availableAlgorithms READ getAvailableAlgorithms)
+    Q_PROPERTY(int algorithmCount READ getAlgorithmCount)
     Q_PROPERTY(bool errorOutputEnabled READ isErrorOutputEnabled WRITE setErrorOutputEnabled)
 public:
     static QAlgorithmRegistry& get_Instance();
@@ -42,7 +42,7 @@ public:
     bool unregisterAlgorithm(const QString &algorithmId);
     std::unique_ptr<QDiffAlgorithm> createAlgorithm(const QString& algorithmId);
 
-    QStringList getAvailableAlgorithms() const;
+
     std::optional<QAlgorithmInfo> getAlgorithmInfo(const QString &algorithmId) const;
     bool isAlgorithmAvailable(const QString &algorithmId) const;
 
@@ -54,9 +54,9 @@ public:
         auto temp = std::make_unique<AlgorithmType>();
 
         QAlgorithmInfo info;
-        info.name = temp.getName();
-        info.description = temp.getDescription();
-        info.capabilities = temp.getCapabilities();
+        info.name = temp->getName(); // Changed from temp.getName()
+        info.description = temp->getDescription(); // Changed from temp.getDescription()
+        info.capabilities = temp->getCapabilities(); // Changed from temp.getCapabilities()
         info.factory = []() -> std::unique_ptr<QDiffAlgorithm> {
             return std::make_unique<AlgorithmType>();
         };
@@ -72,6 +72,8 @@ public:
     QMap<QString, QVariant> getAlgorithmConfiguration(const QString& algorithmId) const;
     bool setAlgorithmConfiguration(const QString& algorithmId, const QMap<QString, QVariant>& config);
     QStringList getAlgorithmConfigurationKeys(const QString& algorithmId) const;
+
+    QStringList getAvailableAlgorithms() const;
 
     // Error Handeling:
     QAlgorithmRegistryError lastError() const {  QMutexLocker locker(&m_mutex); return m_lastError; }
@@ -109,6 +111,11 @@ private:
     QAlgorithmRegistry(const QAlgorithmRegistry &&) = delete;
     QAlgorithmRegistry operator=(const QAlgorithmRegistry &) = delete;
     QAlgorithmRegistry operator=(const QAlgorithmRegistry &&) = delete;
+
+    // without mutex locking (assumes caller handles locking)
+    bool registerAlgorithmInternal(const QString &algorithmId, const QAlgorithmInfo &info);
+    // without mutex locking (assumes caller handles locking)
+    QStringList internalGetAvailableAlgorithms() const;
 
     void setLastError(QAlgorithmRegistryError error) const { m_lastError = error; }
 

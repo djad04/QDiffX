@@ -9,6 +9,10 @@ set(CMAKE_AUTORCC ON)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+if(MSVC)
+    add_compile_options(/Zc:__cplusplus)
+endif()
+
 find_package(QT NAMES Qt6 Qt5 REQUIRED COMPONENTS Core Widgets LinguistTools)
 find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Core Widgets LinguistTools)
 
@@ -16,31 +20,55 @@ set(TS_FILES src/QDiffX_en_150.ts)
 
 set(PROJECT_SOURCES
         main.cpp
-        src/QDiffWidget.cpp
-        src/QDiffWidget.h
-        ${TS_FILES}
 )
+
+set(QDIFFX_CORE_SOURCES
+        src/QDiffWidget.cpp
+        src/DMP/diff_match_patch.cpp
+        src/DTLAlgorithm.cpp
+        src/DMPAlgorithm.cpp
+        src/QAlgorithmRegistry.cpp
+        src/QAlgorithmManager.cpp
+        src/QAlgorithmException.cpp
+)
+
+set(QDIFFX_CORE_HEADERS
+    src/QDiffWidget.h
+    src/DMP/diff_match_patch.h
+    src/DTLAlgorithm.h
+    src/DMPAlgorithm.h
+    src/QAlgorithmManager.h
+    src/QAlgorithmRegistry.h
+    src/QAlgorithmException.h
+    src/QAlgorithmManagerError.h
+    src/QDiffAlgorithm.h
+    src/dtl/Diff.hpp
+    src/dtl/Diff3.hpp
+    src/dtl/dtl.hpp
+    src/dtl/functors.hpp
+    src/dtl/Lcs.hpp
+    src/dtl/Sequence.hpp
+    src/dtl/Ses.hpp
+    src/dtl/variables.hpp
+)
+
+add_library(QDiffXCore STATIC ${QDIFFX_CORE_SOURCES})
+target_sources(QDiffXCore PUBLIC FILE_SET HEADERS FILES ${QDIFFX_CORE_HEADERS})
+
+target_include_directories(QDiffXCore PRIVATE ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(QDiffXCore PRIVATE Qt${QT_VERSION_MAJOR}::Core Qt${QT_VERSION_MAJOR}::Widgets)
 
 if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
     qt_add_executable(QDiffX
         MANUAL_FINALIZATION
         ${PROJECT_SOURCES}
-        src/DMP/diff_match_patch.h
-        src/DMP/diff_match_patch.cpp
-        src/dtl/Diff.hpp src/dtl/Diff3.hpp src/dtl/dtl.hpp src/dtl/functors.hpp src/dtl/Lcs.hpp src/dtl/Sequence.hpp src/dtl/Ses.hpp src/dtl/variables.hpp
-        src/QDiffAlgorithm.h
-        src/DMPAlgorithm.h src/DMPAlgorithm.cpp
-        src/DTLAlgorithm.cpp src/DTLAlgorithm.h
-        src/QAlgorithmRegistry.h src/QAlgorithmRegistry.cpp
-        src/QAlgorithmManager.h src/QAlgorithmManager.cpp
-        src/QAlgorithmException.h src/QAlgorithmException.cpp
-        src/QAlgorithmManagerError.h
-
+        ${TS_FILES}
     )
 # Define target properties for Android with Qt 6 as:
 #    set_property(TARGET QDiffX APPEND PROPERTY QT_ANDROID_PACKAGE_SOURCE_DIR
 #                 ${CMAKE_CURRENT_SOURCE_DIR}/android)
 # For more information, see https://doc.qt.io/qt-6/qt-add-executable.html#target-creation
+    target_link_libraries(QDiffX PRIVATE Qt${QT_VERSION_MAJOR}::Core Qt${QT_VERSION_MAJOR}::Widgets QDiffXCore)
     target_include_directories(QDiffX PRIVATE ${CMAKE_SOURCE_DIR}/src)
     qt_create_translation(QM_FILES ${CMAKE_SOURCE_DIR} ${TS_FILES})
 else()
@@ -58,8 +86,6 @@ else()
 
     qt5_create_translation(QM_FILES ${CMAKE_SOURCE_DIR} ${TS_FILES})
 endif()
-
-target_link_libraries(QDiffX PRIVATE Qt${QT_VERSION_MAJOR}::Core Qt${QT_VERSION_MAJOR}::Widgets)
 
 # Qt for iOS sets MACOSX_BUNDLE_GUI_IDENTIFIER automatically since Qt 6.1.
 # If you are developing for iOS or macOS you should consider setting an
@@ -84,4 +110,10 @@ install(TARGETS QDiffX
 
 if(QT_VERSION_MAJOR EQUAL 6)
     qt_finalize_executable(QDiffX)
+endif()
+
+# Add unit tests
+option(BUILD_TESTING "Build unit tests" ON)
+if(BUILD_TESTING)
+    add_subdirectory(tests)
 endif()
