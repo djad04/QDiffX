@@ -46,7 +46,7 @@ void QAlgorithmRegistry::initializeDefaultAlgorithms()
     registerAlgorithm("dmp", dmpInfo);
 }
 
-bool QDiffX::QAlgorithmRegistry::registerAlgorithm(const QString &algorithmId, const QAlgorithmInfo &info)
+bool QAlgorithmRegistry::registerAlgorithm(const QString &algorithmId, const QAlgorithmInfo &info)
 {
     {
         QMutexLocker locker(&m_mutex);
@@ -147,7 +147,7 @@ void QAlgorithmRegistry::clear()
     QMutexLocker locker(&m_mutex);
     m_algorithms.clear();
     emit registryCleared();
-    emit algorithmsChanged(getAvailableAlgorithms());
+    emit algorithmsChanged(QStringList());
     setLastError(QAlgorithmRegistryError::None);
 }
 
