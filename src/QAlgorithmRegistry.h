@@ -32,8 +32,8 @@ struct QAlgorithmInfo{
 class QAlgorithmRegistry : public QObject
 {
     Q_OBJECT
-    Q_PROPERTY(QStringList availableAlgorithms READ getAvailableAlgorithms NOTIFY algorithmsChanged)
-    Q_PROPERTY(int algorithmCount READ getAlgorithmCount NOTIFY algorithmsChanged)
+    Q_PROPERTY(QStringList availableAlgorithms READ getAvailableAlgorithms)
+    Q_PROPERTY(int algorithmCount READ getAlgorithmCount)
     Q_PROPERTY(bool errorOutputEnabled READ isErrorOutputEnabled WRITE setErrorOutputEnabled)
 public:
     static QAlgorithmRegistry& get_Instance();
@@ -54,9 +54,9 @@ public:
         auto temp = std::make_unique<AlgorithmType>();
 
         QAlgorithmInfo info;
-        info.name = temp.getName();
-        info.description = temp.getDescription();
-        info.capabilities = temp.getCapabilities();
+        info.name = temp->getName(); // Changed from temp.getName()
+        info.description = temp->getDescription(); // Changed from temp.getDescription()
+        info.capabilities = temp->getCapabilities(); // Changed from temp.getCapabilities()
         info.factory = []() -> std::unique_ptr<QDiffAlgorithm> {
             return std::make_unique<AlgorithmType>();
         };
