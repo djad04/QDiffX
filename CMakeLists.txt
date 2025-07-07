@@ -30,6 +30,7 @@ set(QDIFFX_CORE_SOURCES
         src/QAlgorithmRegistry.cpp
         src/QAlgorithmManager.cpp
         src/QAlgorithmException.cpp
+        src/QDiffTextBrowser.cpp
 )
 
 set(QDIFFX_CORE_HEADERS
@@ -50,6 +51,7 @@ set(QDIFFX_CORE_HEADERS
     src/dtl/Sequence.hpp
     src/dtl/Ses.hpp
     src/dtl/variables.hpp
+    src/QDiffTextBrowser.h
 )
 
 add_library(QDiffXCore STATIC ${QDIFFX_CORE_SOURCES})
