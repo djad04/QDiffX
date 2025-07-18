@@ -20,6 +20,12 @@ set(TS_FILES src/QDiffX_en_150.ts)
 
 set(PROJECT_SOURCES
         main.cpp
+        src/QDiffTextBrowser.cpp
+        src/QLineNumberArea.cpp
+)
+set(PROJECT_HEADERS
+     src/QDiffTextBrowser.h
+     src/QLineNumberArea.h
 )
 
 set(QDIFFX_CORE_SOURCES
@@ -30,7 +36,6 @@ set(QDIFFX_CORE_SOURCES
         src/QAlgorithmRegistry.cpp
         src/QAlgorithmManager.cpp
         src/QAlgorithmException.cpp
-        src/QDiffTextBrowser.cpp
 )
 
 set(QDIFFX_CORE_HEADERS
@@ -51,7 +56,6 @@ set(QDIFFX_CORE_HEADERS
     src/dtl/Sequence.hpp
     src/dtl/Ses.hpp
     src/dtl/variables.hpp
-    src/QDiffTextBrowser.h
 )
 
 add_library(QDiffXCore STATIC ${QDIFFX_CORE_SOURCES})
@@ -64,6 +68,7 @@ if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
     qt_add_executable(QDiffX
         MANUAL_FINALIZATION
         ${PROJECT_SOURCES}
+        ${PROJECT_HEADERS}
         ${TS_FILES}
     )
 # Define target properties for Android with Qt 6 as:
