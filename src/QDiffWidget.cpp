@@ -24,16 +24,18 @@ void QDiffWidget::setupUI()
 {
     QVBoxLayout *mainLayout = new QVBoxLayout(this);
 
-    QHBoxLayout *headerLayout = new QHBoxLayout(this);
-    QLabel *leftLabel = new QLabel(m_leftLabel, this);
-    QLabel *rightLabel = new QLabel(m_rightLabel, this);
+    QHBoxLayout *headerLayout = new QHBoxLayout();
+    QLabel *leftLabel = new QLabel(m_leftLabel);
+    QLabel *rightLabel = new QLabel(m_rightLabel);
     headerLayout->addWidget(leftLabel);
     headerLayout->addWidget(rightLabel);
     mainLayout->addLayout(headerLayout);
 
-    m_splitter = new QSplitter(Qt::Horizontal, this);
-    m_leftTextBrowser = new QTextBrowser(m_splitter);
-    m_rightTextBrowser = new QTextBrowser(m_splitter);
+    m_splitter = new QSplitter(Qt::Horizontal);
+    m_leftTextBrowser = new QDiffX::QDiffTextBrowser();
+    m_rightTextBrowser = new QDiffX::QDiffTextBrowser();
+    m_splitter->addWidget(m_leftTextBrowser);
+    m_splitter->addWidget(m_rightTextBrowser);
 
     mainLayout->addWidget(m_splitter);
 }

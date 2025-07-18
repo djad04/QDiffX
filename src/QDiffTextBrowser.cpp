@@ -22,7 +22,7 @@ int QDiffTextBrowser::lineNumberAreaWidth() const
     int lineDigitCount = std::to_string(lineCount).length() ;
     int charWidth = fontMetrics().horizontalAdvance(QLatin1Char('9'));
 
-    int padding = 10;
+    int padding = 20;
 
     return padding + charWidth * lineDigitCount;
 }
@@ -31,7 +31,9 @@ void QDiffTextBrowser::resizeEvent(QResizeEvent *event)
 {
     QTextBrowser::resizeEvent(event);
     QRect cr = contentsRect();
-    m_lineNumberArea->setGeometry(QRect(cr.left(), cr.top(), lineNumberAreaWidth(), cr.height()));
+    m_lineNumberArea->setGeometry(QRect(cr.left(), cr.top(), lineNumberAreaWidth(), cr.height()-2));
+    setViewportMargins(lineNumberAreaWidth() + 2, 0, 0, 0);
+    adjustFontSize();
 }
 
 void QDiffTextBrowser::scrollContentsBy(int dx, int dy)
@@ -51,6 +53,10 @@ void QDiffTextBrowser::paintLineNumberArea(QPaintEvent *event)
     QPainter painter(m_lineNumberArea);
     painter.fillRect(event->rect(),QColor(0xFFFEFC));
 
+    painter.setPen(QColor(0xDDDDDD));
+    painter.drawLine(m_lineNumberArea->width() - 1, event->rect().top(),
+                     m_lineNumberArea->width() - 1, event->rect().bottom());
+
     QTextBlock block =  firstVisibleBlock();
     int blockNumber = block.blockNumber();
     int blocktop = static_cast<int>(blockTop(block));
@@ -59,9 +65,9 @@ void QDiffTextBrowser::paintLineNumberArea(QPaintEvent *event)
     while(block.isValid() && blocktop <= event->rect().bottom()){
         if(block.isVisible() && blockbottom >= event->rect().top()){
             QString number = QString::number(blockNumber + 1);
-            painter.setPen(0xB4B4B2);
-            painter.drawText(0 , blocktop , m_lineNumberArea->width() - 4, fontMetrics().height(),
-                             Qt::AlignRight, number);
+            painter.setPen(QColor(0x999999));
+            painter.drawText(4 , blocktop , m_lineNumberArea->width() - 8, fontMetrics().height(),
+                              Qt::AlignRight | Qt::AlignVCenter, number);
         }
 
         block = block.next();
@@ -73,6 +79,17 @@ void QDiffTextBrowser::paintLineNumberArea(QPaintEvent *event)
 
     }
 
+}
+
+void QDiffTextBrowser::adjustFontSize()
+{
+    int baseSize = 14;
+    int scaledSize = baseSize * height() / 400; // Adjust 400 as needed
+    scaledSize = qBound(10, scaledSize, 18);
+
+    QFont font = this->font();
+    font.setPointSize(scaledSize);
+    setFont(font);
 }
 
 QTextBlock QDiffTextBrowser::firstVisibleBlock()
@@ -98,14 +115,14 @@ QTextBlock QDiffTextBrowser::firstVisibleBlock()
 
 qreal QDiffTextBrowser::blockTop(const QTextBlock &block)
 {
-        QRectF blockRect = document()->documentLayout()->blockBoundingRect(block);
-        return blockRect.top() - verticalScrollBar()->value();
+    QRectF blockRect = document()->documentLayout()->blockBoundingRect(block);
+    return blockRect.top() - verticalScrollBar()->value();
 }
 
 qreal QDiffTextBrowser::blockBottom(const QTextBlock &block)
 {
-        QRectF blockRect = document()->documentLayout()->blockBoundingRect(block);
-        return blockRect.bottom() - verticalScrollBar()->value();
+    QRectF blockRect = document()->documentLayout()->blockBoundingRect(block);
+    return blockRect.bottom() - verticalScrollBar()->value();
 }
 
 

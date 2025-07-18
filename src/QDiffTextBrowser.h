@@ -27,6 +27,12 @@ public:
     void paintLineNumberArea(QPaintEvent* event);
 
 private:
+    void adjustFontSize();
+    //Helpers
+    QTextBlock firstVisibleBlock();
+    qreal blockTop(const QTextBlock& block);
+    qreal blockBottom(const QTextBlock& block);
+private:
     QLineNumberArea* m_lineNumberArea;
 };
 
