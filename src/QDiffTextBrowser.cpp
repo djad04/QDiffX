@@ -7,6 +7,7 @@
 #include <QAbstractTextDocumentLayout>
 #include<QScrollBar>
 
+
 namespace QDiffX{
 
 QDiffTextBrowser::QDiffTextBrowser(QWidget* parent) {
@@ -32,7 +33,7 @@ int QDiffTextBrowser::lineNumberAreaWidth() const
     int lineDigitCount = std::to_string(lineCount).length() ;
     int charWidth = fontMetrics().horizontalAdvance(QLatin1Char('9'));
 
-    int padding = 20;
+    int padding = LINE_NUMBER_AREA_PADDING;
 
     return padding + charWidth * lineDigitCount;
 }
@@ -113,14 +114,14 @@ void QDiffTextBrowser::applyDiffHighlighting() {
 QColor QDiffTextBrowser::getBackgroundColorForOperation(DiffOperation operation) const {
     switch (operation) {
     case DiffOperation::Insert:
-        return QColor(0xD4EDDA); // Light green
+        return QColor(INSERT_BG_COLOR);
     case DiffOperation::Delete:
-        return QColor(0xF8D7DA); // Light red
+        return QColor(DELETE_BG_COLOR);
     case DiffOperation::Replace:
-        return QColor(0xFFF3CD); // Light yellow
+        return QColor(REPLACE_BG_COLOR);
     case DiffOperation::Equal:
     default:
-        return QColor(); // Invalid color (no background)
+        return QColor();
     }
 }
 
@@ -212,9 +213,9 @@ void QDiffTextBrowser::paintEvent(QPaintEvent *event)
 void QDiffTextBrowser::paintLineNumberArea(QPaintEvent *event)
 {
     QPainter painter(m_lineNumberArea);
-    painter.fillRect(event->rect(),QColor(0xFFFEFC));
+    painter.fillRect(event->rect(), QColor(LINE_NUMBER_BG_COLOR));
 
-    painter.setPen(QColor(0xDDDDDD));
+    painter.setPen(QColor(LINE_NUMBER_BORDER_COLOR));
     painter.drawLine(m_lineNumberArea->width() - 1, event->rect().top(),
                      m_lineNumberArea->width() - 1, event->rect().bottom());
 
@@ -226,8 +227,8 @@ void QDiffTextBrowser::paintLineNumberArea(QPaintEvent *event)
     while(block.isValid() && blocktop <= event->rect().bottom()){
         if(block.isVisible() && blockbottom >= event->rect().top()){
             QString number = QString::number(blockNumber + 1);
-            painter.setPen(QColor(0x999999));
-            painter.drawText(4 , blocktop , m_lineNumberArea->width() - 8, fontMetrics().height(),
+            painter.setPen(QColor(LINE_NUMBER_TEXT_COLOR));
+            painter.drawText(0 , blocktop , m_lineNumberArea->width() - m_lineNumberArea->width() * 0.3, fontMetrics().height(),
                               Qt::AlignRight | Qt::AlignVCenter, number);
         }
 
@@ -244,9 +245,9 @@ void QDiffTextBrowser::paintLineNumberArea(QPaintEvent *event)
 
 void QDiffTextBrowser::adjustFontSize()
 {
-    int baseSize = 14;
-    int scaledSize = baseSize * height() / 400; // Adjust 400 as needed
-    scaledSize = qBound(10, scaledSize, 18);
+    int baseSize = BASE_FONT_SIZE;
+    int scaledSize = baseSize * height() / FONT_SCALE_DIVISOR;
+    scaledSize = qBound(MIN_FONT_SIZE, scaledSize, MAX_FONT_SIZE);
 
     QFont font = this->font();
     font.setPointSize(scaledSize);
