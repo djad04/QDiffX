@@ -11,6 +11,16 @@ namespace QDiffX{
 
 QDiffTextBrowser::QDiffTextBrowser(QWidget* parent) {
     m_lineNumberArea = new QLineNumberArea(this);
+
+    setLineWrapMode(QTextEdit::NoWrap);
+    setReadOnly(true);
+
+    connect(this->verticalScrollBar(), &QScrollBar::valueChanged,
+            m_lineNumberArea, QOverload<>::of(&QWidget::update));
+    connect(this->horizontalScrollBar(), &QScrollBar::valueChanged,
+            m_lineNumberArea, QOverload<>::of(&QWidget::update));
+    connect(this->document(), &QTextDocument::blockCountChanged,
+            this, [this]() { m_lineNumberArea->update(); });
     
 }
 
@@ -25,6 +35,115 @@ int QDiffTextBrowser::lineNumberAreaWidth() const
     int padding = 20;
 
     return padding + charWidth * lineDigitCount;
+}
+
+void QDiffTextBrowser::setDiffResult(const QDiffResult &result)
+{
+    m_diffResult = result;
+    m_lineOperations.clear();
+
+    if (!result.success()) {
+        setPlainText(tr("Error: %1").arg(result.errorMessage()));
+        return;
+    }
+
+    // Create a map to store content for each line position
+    QMap<int, QString> lineContent;
+    int maxLineNumber = -1;
+
+    // First pass: collect all line content and find the highest line number
+    for (const auto &change : result.changes()) {
+        if (change.lineNumber >= 0) {
+            lineContent[change.lineNumber] = change.text;
+            m_lineOperations[change.lineNumber] = change.operation;
+            maxLineNumber = qMax(maxLineNumber, change.lineNumber);
+        }
+    }
+
+    // Build the document content
+    QString content;
+    QStringList lines;
+
+    // Create enough lines to accommodate the highest line number
+    for (int i = 1; i <= maxLineNumber; ++i) {
+        if (lineContent.contains(i)) {
+            lines.append(lineContent[i]);
+        } else {
+            lines.append(QString()); // Empty line
+            m_lineOperations[i] = DiffOperation::Equal;
+        }
+    }
+
+    // Handle changes without line numbers (append at end)
+    for (const auto &change : result.changes()) {
+        if (change.lineNumber < 0) {
+            lines.append(change.text);
+            m_lineOperations[lines.size() - 1] = change.operation;
+        }
+    }
+
+    content = lines.join('\n');
+    setPlainText(content);
+    applyDiffHighlighting();
+}
+
+void QDiffTextBrowser::applyDiffHighlighting() {
+    QTextCursor cursor(document());
+    cursor.beginEditBlock();
+
+    QTextBlock block = document()->firstBlock();
+    int blockNumber = 1;
+
+    while (block.isValid()) {
+        if (m_lineOperations.contains(blockNumber)) {
+            QTextCharFormat format = getFormatForOperation(m_lineOperations[blockNumber]);
+
+            cursor.setPosition(block.position());
+            cursor.setPosition(block.position() + block.length() - 1, QTextCursor::KeepAnchor);
+            cursor.mergeCharFormat(format);
+        }
+
+        block = block.next();
+        blockNumber++;
+    }
+
+    cursor.endEditBlock();
+}
+
+QColor QDiffTextBrowser::getBackgroundColorForOperation(DiffOperation operation) const {
+    switch (operation) {
+    case DiffOperation::Insert:
+        return QColor(0xD4EDDA); // Light green
+    case DiffOperation::Delete:
+        return QColor(0xF8D7DA); // Light red
+    case DiffOperation::Replace:
+        return QColor(0xFFF3CD); // Light yellow
+    case DiffOperation::Equal:
+    default:
+        return QColor(); // Invalid color (no background)
+    }
+}
+
+QTextCharFormat QDiffTextBrowser::getFormatForOperation(DiffOperation operation) const {
+    QTextCharFormat format;
+
+    switch (operation) {
+    case DiffOperation::Insert:
+        format.setForeground(QColor(0x155724)); // Dark green text
+        break;
+    case DiffOperation::Delete:
+        format.setForeground(QColor(0x721C24)); // Dark red text
+        break;
+    case DiffOperation::Replace:
+        format.setForeground(QColor(0x856404)); // Dark yellow text
+        break;
+    case DiffOperation::Equal:
+    default:
+        // No special formatting for equal lines
+        break;
+    }
+
+    return format;
 }
 
 void QDiffTextBrowser::resizeEvent(QResizeEvent *event)

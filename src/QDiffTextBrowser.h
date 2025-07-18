@@ -16,15 +16,18 @@ public:
     explicit QDiffTextBrowser(QWidget* parent = nullptr);
     
     int lineNumberAreaWidth() const;
-    void setDiffResult(const QDiffResult& result); // To be implemented later
+    void setDiffResult(const QDiffResult& result);
 
+    void paintLineNumberArea(QPaintEvent* event);
+
+    void applyDiffHighlighting();
+    QTextCharFormat getFormatForOperation(DiffOperation operation) const;
+
+    QColor getBackgroundColorForOperation(DiffOperation operation) const;
 protected:
     void resizeEvent(QResizeEvent* event) override;
     void scrollContentsBy(int dx, int dy) override;
     void paintEvent(QPaintEvent* event) override;
-
-public:
-    void paintLineNumberArea(QPaintEvent* event);
 
 private:
     void adjustFontSize();
@@ -34,6 +37,8 @@ private:
     qreal blockBottom(const QTextBlock& block);
 private:
     QLineNumberArea* m_lineNumberArea;
+    QDiffResult m_diffResult;
+    QMap<int,DiffOperation> m_lineOperations;
 };
 
 }// namespace QDiffX
