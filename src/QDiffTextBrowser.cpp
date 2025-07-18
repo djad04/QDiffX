@@ -163,8 +163,50 @@ void QDiffTextBrowser::scrollContentsBy(int dx, int dy)
 
 void QDiffTextBrowser::paintEvent(QPaintEvent *event)
 {
+
+    QPainter painter(viewport());
+
+    QTextBlock block = firstVisibleBlock();
+    int blockNumber = block.blockNumber()+1;
+
+    QPointF scrollOffset(
+        this->horizontalScrollBar()->value(),
+        this->verticalScrollBar()->value()
+        );
+
+    while (block.isValid()) {
+        QRectF blockRect = document()->documentLayout()->blockBoundingRect(block);
+        QPointF visualPos = blockRect.topLeft() - scrollOffset;
+
+        // Calculate the visual rectangle for the full width
+        QRectF visualRect = QRectF(
+            0, // Start from left edge of viewport
+            visualPos.y(),
+            viewport()->width(), // Full width of the viewport
+            blockRect.height()
+            );
+
+        // Only paint if the block is visible
+        if (visualRect.intersects(event->rect()) && visualRect.bottom() >= 0) {
+            if (m_lineOperations.contains(blockNumber )) {
+                QColor backgroundColor = getBackgroundColorForOperation(m_lineOperations[blockNumber]);
+                if (backgroundColor.isValid()) {
+                    painter.fillRect(visualRect, backgroundColor);
+                }
+            }
+        }
+
+        block = block.next();
+        blockNumber++;
+
+        // Break if we've gone past the visible area
+        if (visualPos.y() > event->rect().bottom()) {
+            break;
+        }
+    }
+
+
     QTextBrowser::paintEvent(event);
-    //Todo : custom paint and highlights
 }
 
 void QDiffTextBrowser::paintLineNumberArea(QPaintEvent *event)
