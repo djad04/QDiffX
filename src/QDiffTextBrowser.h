@@ -2,14 +2,19 @@
 
 #include <QObject>
 #include <QtWidgets/QTextBrowser>
-#include "LineNumberArea.h"
+#include "QLineNumberArea.h"
+#include "QDiffAlgorithm.h"
+
+namespace QDiffX{
+
+class QLineNumberArea;
 
 class QDiffTextBrowser : public QTextBrowser
 {
     Q_OBJECT
 public:
     explicit QDiffTextBrowser(QWidget* parent = nullptr);
-
+    
     int lineNumberAreaWidth() const;
     void setDiffResult(const QDiffResult& result); // To be implemented later
 
@@ -22,6 +27,7 @@ public:
     void paintLineNumberArea(QPaintEvent* event);
 
 private:
-    LineNumberArea* m_lineNumberArea;
+    QLineNumberArea* m_lineNumberArea;
 };
 
+}// namespace QDiffX
