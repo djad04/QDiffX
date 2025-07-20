@@ -7,6 +7,7 @@
 #include <QAbstractTextDocumentLayout>
 #include<QScrollBar>
 
+//TODO: FIX THE linenumberprint for  applyBlockSpacing Function (the line number area doesnt resize blocks correctly )
 
 namespace QDiffX{
 
@@ -75,7 +76,6 @@ void QDiffTextBrowser::setDiffResult(const QDiffResult &result)
         }
     }
 
-    // Handle changes without line numbers (append at end)
     for (const auto &change : result.changes()) {
         if (change.lineNumber < 0) {
             lines.append(change.text);
@@ -85,7 +85,11 @@ void QDiffTextBrowser::setDiffResult(const QDiffResult &result)
 
     content = lines.join('\n');
     setPlainText(content);
+
+    applyBlockSpacing();
     applyDiffHighlighting();
+
+    update();
 }
 
 void QDiffTextBrowser::applyDiffHighlighting() {
@@ -106,6 +110,26 @@ void QDiffTextBrowser::applyDiffHighlighting() {
 
         block = block.next();
         blockNumber++;
+    }
+
+    cursor.endEditBlock();
+}
+
+void QDiffTextBrowser::applyBlockSpacing()
+{
+    QTextCursor cursor(document());
+    cursor.beginEditBlock();
+
+    QTextBlock block = document()->firstBlock();
+    while (block.isValid()) {
+        QTextBlockFormat blockFormat;
+        blockFormat.setTopMargin(0);
+        blockFormat.setBottomMargin(0);
+
+        QTextCursor blockCursor(block);
+        blockCursor.setBlockFormat(blockFormat);
+
+        block = block.next();
     }
 
     cursor.endEditBlock();
@@ -152,7 +176,11 @@ void QDiffTextBrowser::resizeEvent(QResizeEvent *event)
     QTextBrowser::resizeEvent(event);
     QRect cr = contentsRect();
     m_lineNumberArea->setGeometry(QRect(cr.left(), cr.top(), lineNumberAreaWidth(), cr.height()-2));
-    setViewportMargins(lineNumberAreaWidth() + 2, 0, 0, 0);
+
+    QTextFrame *rootFrame = document()->rootFrame();
+    QTextFrameFormat format = rootFrame->frameFormat();
+    format.setLeftMargin(m_lineNumberArea->width() + TEXT_LEFT_MARGIN);
+    rootFrame->setFrameFormat(format);
     adjustFontSize();
 }
 
@@ -200,7 +228,7 @@ void QDiffTextBrowser::paintEvent(QPaintEvent *event)
         block = block.next();
         blockNumber++;
 
-        // Break if we've gone past the visible area
+
         if (visualPos.y() > event->rect().bottom()) {
             break;
         }
