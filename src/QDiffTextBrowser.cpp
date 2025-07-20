@@ -23,7 +23,13 @@ QDiffTextBrowser::QDiffTextBrowser(QWidget* parent) {
             m_lineNumberArea, QOverload<>::of(&QWidget::update));
     connect(this->document(), &QTextDocument::blockCountChanged,
             this, [this]() { m_lineNumberArea->update(); });
-    
+
+}
+
+QDiffTextBrowser::~QDiffTextBrowser()
+{
+    if(m_lineNumberArea)
+        delete m_lineNumberArea;
 }
 
 
@@ -49,11 +55,9 @@ void QDiffTextBrowser::setDiffResult(const QDiffResult &result)
         return;
     }
 
-    // Create a map to store content for each line position
     QMap<int, QString> lineContent;
     int maxLineNumber = -1;
 
-    // First pass: collect all line content and find the highest line number
     for (const auto &change : result.changes()) {
         if (change.lineNumber >= 0) {
             lineContent[change.lineNumber] = change.text;
@@ -123,8 +127,8 @@ void QDiffTextBrowser::applyBlockSpacing()
     QTextBlock block = document()->firstBlock();
     while (block.isValid()) {
         QTextBlockFormat blockFormat;
-        blockFormat.setTopMargin(0);
-        blockFormat.setBottomMargin(0);
+        blockFormat.setTopMargin(TEXT_TOP_BOTTOM_MARGIN);
+        blockFormat.setBottomMargin(TEXT_TOP_BOTTOM_MARGIN);
 
         QTextCursor blockCursor(block);
         blockCursor.setBlockFormat(blockFormat);
@@ -164,7 +168,6 @@ QTextCharFormat QDiffTextBrowser::getFormatForOperation(DiffOperation operation)
         break;
     case DiffOperation::Equal:
     default:
-        // No special formatting for equal lines
         break;
     }
 
@@ -211,8 +214,8 @@ void QDiffTextBrowser::paintEvent(QPaintEvent *event)
         QRectF visualRect = QRectF(
             0, // Start from left edge of viewport
             visualPos.y(),
-            viewport()->width(), // Full width of the viewport
-            blockRect.height()
+            viewport()->width() , // Full width of the viewport
+            blockRect.height() + TEXT_TOP_BOTTOM_MARGIN
             );
 
         // Only paint if the block is visible
@@ -249,24 +252,37 @@ void QDiffTextBrowser::paintLineNumberArea(QPaintEvent *event)
 
     QTextBlock block =  firstVisibleBlock();
     int blockNumber = block.blockNumber();
-    int blocktop = static_cast<int>(blockTop(block));
-    int blockbottom = static_cast<int>(blockBottom(block));
 
-    while(block.isValid() && blocktop <= event->rect().bottom()){
-        if(block.isVisible() && blockbottom >= event->rect().top()){
+    QPointF scrollOffset(
+        horizontalScrollBar()->value(),
+        verticalScrollBar()->value()
+        );
+
+    while (block.isValid()) {
+        QRectF blockRect = document()->documentLayout()->blockBoundingRect(block);
+
+        QPointF visualPos = blockRect.topLeft() - scrollOffset;
+
+        if (visualPos.y() > event->rect().bottom()) {
+            break;
+        }
+
+        if (block.isVisible() && (visualPos.y() + blockRect.height()) >= event->rect().top()) {
             QString number = QString::number(blockNumber + 1);
-            painter.setPen(QColor(LINE_NUMBER_TEXT_COLOR));
-            painter.drawText(0 , blocktop , m_lineNumberArea->width() - m_lineNumberArea->width() * 0.3, fontMetrics().height(),
-                              Qt::AlignRight | Qt::AlignVCenter, number);
+
+            QRectF drawRect(
+                0,
+                visualPos.y(),
+                m_lineNumberArea->width() - m_lineNumberArea->width() * LINE_NUMBER_TEXT_WIDTH_RATIO,
+                blockRect.height()
+                );
+
+             painter.setPen(QColor(LINE_NUMBER_TEXT_COLOR));
+            painter.drawText(drawRect, Qt::AlignRight | Qt::AlignVCenter, number);
         }
 
         block = block.next();
-        if(block.isValid()) {
-            blocktop = blockbottom;
-            blockbottom = static_cast<int>(blockBottom(block));
-        }
         ++blockNumber;
-
     }
 
 }
