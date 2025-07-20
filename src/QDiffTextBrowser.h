@@ -14,7 +14,8 @@ class QDiffTextBrowser : public QTextBrowser
     Q_OBJECT
 public:
     explicit QDiffTextBrowser(QWidget* parent = nullptr);
-    
+    ~QDiffTextBrowser();
+
     int lineNumberAreaWidth() const;
     void setDiffResult(const QDiffResult& result);
 
@@ -37,6 +38,7 @@ public:
     static constexpr int BASE_FONT_SIZE = 14;
     static constexpr int FONT_SCALE_DIVISOR = 400;
     static constexpr int TEXT_LEFT_MARGIN = 25;
+    static constexpr int TEXT_TOP_BOTTOM_MARGIN = 8;
 
     //Colors
     static constexpr uint32_t LINE_NUMBER_BG_COLOR = 0xFFFEFC;
