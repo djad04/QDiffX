@@ -29,13 +29,13 @@ public:
     QColor getBackgroundColorForOperation(DiffOperation operation) const;
 
     // Line Number Area
-    static constexpr int LINE_NUMBER_AREA_PADDING = 40;
+    static constexpr double LINE_NUMBER_AREA_PADDING_RATIO = 0.07;
     static constexpr double LINE_NUMBER_TEXT_WIDTH_RATIO = 0.3;
 
     //Text
-    static constexpr int MIN_FONT_SIZE = 10;
-    static constexpr int MAX_FONT_SIZE = 18;
-    static constexpr int BASE_FONT_SIZE = 14;
+    static constexpr int MIN_FONT_SIZE = 14;
+    static constexpr int MAX_FONT_SIZE = 36;
+    static constexpr int BASE_FONT_SIZE = 18;
     static constexpr int FONT_SCALE_DIVISOR = 400;
     static constexpr int TEXT_LEFT_MARGIN = 25;
     static constexpr int TEXT_TOP_BOTTOM_MARGIN = 8;
