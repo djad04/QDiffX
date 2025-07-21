@@ -40,7 +40,7 @@ int QDiffTextBrowser::lineNumberAreaWidth() const
     int lineDigitCount = std::to_string(lineCount).length() ;
     int charWidth = fontMetrics().horizontalAdvance(QLatin1Char('9'));
 
-    int padding = LINE_NUMBER_AREA_PADDING;
+    int padding = this->width() * LINE_NUMBER_AREA_PADDING_RATIO;
 
     return padding + charWidth * lineDigitCount;
 }
@@ -178,13 +178,15 @@ void QDiffTextBrowser::resizeEvent(QResizeEvent *event)
 {
     QTextBrowser::resizeEvent(event);
     QRect cr = contentsRect();
-    m_lineNumberArea->setGeometry(QRect(cr.left(), cr.top(), lineNumberAreaWidth(), cr.height()-2));
+    m_lineNumberArea->setGeometry(QRect(cr.left(), cr.top() + 1, lineNumberAreaWidth(), cr.height()-2));
 
     QTextFrame *rootFrame = document()->rootFrame();
     QTextFrameFormat format = rootFrame->frameFormat();
     format.setLeftMargin(m_lineNumberArea->width() + TEXT_LEFT_MARGIN);
     rootFrame->setFrameFormat(format);
     adjustFontSize();
+
+     m_lineNumberArea->update();
 }
 
 void QDiffTextBrowser::scrollContentsBy(int dx, int dy)
