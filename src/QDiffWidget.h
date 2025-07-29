@@ -2,6 +2,7 @@
 
 #include <QSplitter>
 #include <QTextBrowser>
+#include <QDiffTextBrowser.h>
 #include <QWidget>
 
 namespace QDiffX {
@@ -71,8 +72,8 @@ private:
 
 private:
     QSplitter *m_splitter;
-    QTextBrowser *m_leftTextBrowser;
-    QTextBrowser *m_rightTextBrowser;
+    QDiffTextBrowser *m_leftTextBrowser;
+    QDiffTextBrowser *m_rightTextBrowser;
 
     QString m_leftContent;
     QString m_rightContent;
