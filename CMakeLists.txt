@@ -10,7 +10,7 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 if(MSVC)
-    add_compile_options(/Zc:__cplusplus)
+   add_compile_options(/permissive- /Zc:__cplusplus)
 endif()
 
 find_package(QT NAMES Qt6 Qt5 REQUIRED COMPONENTS Core Widgets LinguistTools)
@@ -19,21 +19,27 @@ find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Core Widgets LinguistTool
 set(TS_FILES src/QDiffX_en_150.ts)
 
 set(PROJECT_SOURCES
-        main.cpp
+    main.cpp
+    src/QDiffWidget.cpp
+    src/QDiffTextBrowser.cpp
+    src/QLineNumberArea.cpp
+)
+set(PROJECT_HEADERS
+    src/QDiffWidget.h
+    src/QDiffTextBrowser.h
+    src/QLineNumberArea.h
 )
 
 set(QDIFFX_CORE_SOURCES
-        src/QDiffWidget.cpp
-        src/DMP/diff_match_patch.cpp
-        src/DTLAlgorithm.cpp
-        src/DMPAlgorithm.cpp
-        src/QAlgorithmRegistry.cpp
-        src/QAlgorithmManager.cpp
-        src/QAlgorithmException.cpp
+    src/DMP/diff_match_patch.cpp
+    src/DTLAlgorithm.cpp
+    src/DMPAlgorithm.cpp
+    src/QAlgorithmRegistry.cpp
+    src/QAlgorithmManager.cpp
+    src/QAlgorithmException.cpp
 )
 
 set(QDIFFX_CORE_HEADERS
-    src/QDiffWidget.h
     src/DMP/diff_match_patch.h
     src/DTLAlgorithm.h
     src/DMPAlgorithm.h
@@ -62,36 +68,37 @@ if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
     qt_add_executable(QDiffX
         MANUAL_FINALIZATION
         ${PROJECT_SOURCES}
+        ${PROJECT_HEADERS}
         ${TS_FILES}
     )
 # Define target properties for Android with Qt 6 as:
 #    set_property(TARGET QDiffX APPEND PROPERTY QT_ANDROID_PACKAGE_SOURCE_DIR
 #                 ${CMAKE_CURRENT_SOURCE_DIR}/android)
 # For more information, see https://doc.qt.io/qt-6/qt-add-executable.html#target-creation
-    target_link_libraries(QDiffX PRIVATE Qt${QT_VERSION_MAJOR}::Core Qt${QT_VERSION_MAJOR}::Widgets QDiffXCore)
-    target_include_directories(QDiffX PRIVATE ${CMAKE_SOURCE_DIR}/src)
-    qt_create_translation(QM_FILES ${CMAKE_SOURCE_DIR} ${TS_FILES})
+target_link_libraries(QDiffX PRIVATE Qt${QT_VERSION_MAJOR}::Core Qt${QT_VERSION_MAJOR}::Widgets QDiffXCore)
+target_include_directories(QDiffX PRIVATE ${CMAKE_SOURCE_DIR}/src)
+qt_create_translation(QM_FILES ${CMAKE_SOURCE_DIR} ${TS_FILES})
 else()
     if(ANDROID)
         add_library(QDiffX SHARED
             ${PROJECT_SOURCES}
         )
-# Define properties for Android with Qt 5 after find_package() calls as:
-#    set(ANDROID_PACKAGE_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/android")
-    else()
-        add_executable(QDiffX
-            ${PROJECT_SOURCES}
-        )
-    endif()
+    # Define properties for Android with Qt 5 after find_package() calls as:
+    #    set(ANDROID_PACKAGE_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/android")
+else()
+    add_executable(QDiffX
+        ${PROJECT_SOURCES}
+    )
+endif()
 
-    qt5_create_translation(QM_FILES ${CMAKE_SOURCE_DIR} ${TS_FILES})
+qt5_create_translation(QM_FILES ${CMAKE_SOURCE_DIR} ${TS_FILES})
 endif()
 
 # Qt for iOS sets MACOSX_BUNDLE_GUI_IDENTIFIER automatically since Qt 6.1.
 # If you are developing for iOS or macOS you should consider setting an
 # explicit, fixed bundle identifier manually though.
 if(${QT_VERSION} VERSION_LESS 6.1.0)
-  set(BUNDLE_ID_OPTION MACOSX_BUNDLE_GUI_IDENTIFIER com.example.QDiffX)
+    set(BUNDLE_ID_OPTION MACOSX_BUNDLE_GUI_IDENTIFIER com.example.QDiffX)
 endif()
 set_target_properties(QDiffX PROPERTIES
     ${BUNDLE_ID_OPTION}
