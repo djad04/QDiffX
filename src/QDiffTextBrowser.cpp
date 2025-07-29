@@ -7,7 +7,6 @@
 #include <QAbstractTextDocumentLayout>
 #include<QScrollBar>
 
-//TODO: FIX THE linenumberprint for  applyBlockSpacing Function (the line number area doesnt resize blocks correctly )
 
 namespace QDiffX{
 

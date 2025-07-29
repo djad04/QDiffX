@@ -3,12 +3,7 @@
 #include "QAlgorithmRegistry.h"
 #include "QAlgorithmManagerError.h"
 #include <QFuture>
-/*
- TODO:
--calculateDiffSync
--calculateDiffWithAlgorithm
--calculateDiff
-*/
+
 
 
 namespace QDiffX {
