@@ -128,6 +128,106 @@ QDiffResult QAlgorithmManager::calculateDiffWithAlgorithm(const QString &algorit
     return executeAlgorithm(algorithmId, leftText, rightText);
 }
 
+
+QFuture<QSideBySideDiffResult> QAlgorithmManager::calculateSideBySideDiff(const QString &leftText, const QString &rightText, QExecutionMode executionMode, QAlgorithmSelectionMode selectionMode, QString algorithmId)
+{
+    if (executionMode == QExecutionMode::Synchronous) {
+        QPromise<QSideBySideDiffResult> promise;
+        promise.start();
+        promise.addResult(calculateSideBySideDiffSync(leftText, rightText, selectionMode, algorithmId));
+        promise.finish();
+        return promise.future();
+    } else {
+        return calculateSideBySideDiffAsync(leftText, rightText, selectionMode, algorithmId);
+    }
+}
+
+QFuture<QSideBySideDiffResult> QAlgorithmManager::calculateSideBySideDiffAsync(const QString &leftText, const QString &rightText, QAlgorithmSelectionMode selectionMode, QString algorithmId)
+{
+    QString algorithm;
+    if(selectionMode == QAlgorithmSelectionMode::Manual)
+    {
+        if(algorithmId.isEmpty()) {
+            if (m_currentAlgorithm.isEmpty()) {
+                setLastError(QAlgorithmManagerError::InvalidAlgorithmId);
+                if (m_errorOutputEnabled) qWarning() << "QAlgorithmManager::calculateSideBySideDiffAsync:: Algorithm ID is empty no selected algorithm";
+                emit errorOccurred(QAlgorithmManagerError::InvalidAlgorithmId, errorMessage(QAlgorithmManagerError::InvalidAlgorithmId));
+                QPromise<QSideBySideDiffResult> promise;
+                promise.start();
+                promise.addResult(QSideBySideDiffResult(errorMessage(QAlgorithmManagerError::InvalidAlgorithmId)));
+                promise.finish();
+                return promise.future();
+            }
+            algorithm = m_currentAlgorithm;
+        }
+        else {
+            if(!isAlgorithmAvailable(algorithmId)) {
+                setLastError(QAlgorithmManagerError::AlgorithmNotFound);
+                if(m_errorOutputEnabled) qWarning() << "QAlgorithmManager::calculateSideBySideDiffAsync:: Algorithm " << '"' << algorithmId << '"' << " is not Found ";
+                emit errorOccurred(QAlgorithmManagerError::AlgorithmNotFound, errorMessage(QAlgorithmManagerError::AlgorithmNotFound));
+                QPromise<QSideBySideDiffResult> promise;
+                promise.start();
+                promise.addResult(QSideBySideDiffResult(errorMessage(QAlgorithmManagerError::AlgorithmNotFound)));
+                promise.finish();
+                return promise.future();
+            }
+            algorithm = algorithmId;
+        }
+    }
+    else {
+        algorithm = autoSelectAlgorithm(leftText, rightText);
+    }
+    
+    auto future = QtConcurrent::run([this, algorithm, leftText, rightText]() {
+        // Execute the algorithm directly to get unified diff
+        QDiffResult unifiedResult = executeAlgorithm(algorithm, leftText, rightText);
+        
+        if (!unifiedResult.success()) {
+            return QSideBySideDiffResult(unifiedResult.errorMessage());
+        }
+        
+        // Convert to side-by-side format
+        return divideDiffForSideBySide(unifiedResult, algorithm);
+    });
+    
+    auto *watcher = new QFutureWatcher<QSideBySideDiffResult>(this);
+    connect(watcher, &QFutureWatcher<QSideBySideDiffResult>::finished, this, [this, watcher]() {
+        QSideBySideDiffResult result = watcher->result();
+        emit sideBySideDiffCalculated(result);
+        watcher->deleteLater();
+    });
+    watcher->setFuture(future);
+    
+    return future;
+}
+
+QSideBySideDiffResult QAlgorithmManager::calculateSideBySideDiffSync(const QString &leftText, const QString &rightText, QAlgorithmSelectionMode selectionMode, QString algorithmId)
+{
+    // Use the existing unified diff calculation
+    QDiffResult unifiedResult = calculateDiffSync(leftText, rightText, selectionMode, algorithmId);
+    
+    if (!unifiedResult.success()) {
+        return QSideBySideDiffResult(unifiedResult.errorMessage());
+    }
+    
+    // Determine which algorithm was actually used
+    QString algorithmUsed;
+    if (selectionMode == QAlgorithmSelectionMode::Manual) {
+        algorithmUsed = algorithmId.isEmpty() ? m_currentAlgorithm : algorithmId;
+    } else {
+        algorithmUsed = autoSelectAlgorithm(leftText, rightText);
+    }
+    
+    // Apply the dividing function to convert to side-by-side format
+    QSideBySideDiffResult result = divideDiffForSideBySide(unifiedResult, algorithmUsed);
+    
+    if (result.success) {
+        emit sideBySideDiffCalculated(result);
+    }
+    
+    return result;
+}
+
 bool QAlgorithmManager::isAlgorithmAvailable(const QString &algorithmId) const
 {
     auto &registry = QAlgorithmRegistry::get_Instance();
@@ -355,6 +455,131 @@ QStringList QAlgorithmManager::getAlgorithmConfigurationKeys(const QString& algo
 
 QStringList QAlgorithmManager::getAvailableAlgorithms() const {
     return QAlgorithmRegistry::get_Instance().getAvailableAlgorithms();
+}
+
+QSideBySideDiffResult QAlgorithmManager::divideDiffForSideBySide(const QDiffResult& unifiedResult, const QString& algorithmUsed)
+{
+    QSideBySideDiffResult result;
+    result.algorithmUsed = algorithmUsed;
+    result.success = true;
+    
+    // Initialize the left and right side results
+    result.leftSide.setSuccess(true);
+    result.rightSide.setSuccess(true);
+    
+    // Copy metadata from unified result
+    result.leftSide.setMetaData(unifiedResult.allMetaData());
+    result.rightSide.setMetaData(unifiedResult.allMetaData());
+    
+    QList<DiffChange> leftChanges;
+    QList<DiffChange> rightChanges;
+    
+    int leftLineNumber = 1;
+    int rightLineNumber = 1;
+    
+    // Process each change in the unified diff
+    for (const DiffChange& change : unifiedResult.changes()) {
+        switch (change.operation) {
+        case DiffOperation::Equal:
+            // Equal lines appear on both sides
+            {
+                DiffChange leftChange = change;
+                leftChange.lineNumber = leftLineNumber;
+                leftChanges.append(leftChange);
+                
+                DiffChange rightChange = change;
+                rightChange.lineNumber = rightLineNumber;
+                rightChanges.append(rightChange);
+                
+                // Count lines in the equal text
+                int lineCount = change.text.count('\n');
+                if (!change.text.isEmpty() && !change.text.endsWith('\n')) {
+                    lineCount++; // Count the last line if it doesn't end with newline
+                }
+                leftLineNumber += lineCount;
+                rightLineNumber += lineCount;
+            }
+            break;
+            
+        case DiffOperation::Delete:
+            // Delete operations only appear on the left side
+            {
+                DiffChange leftChange = change;
+                leftChange.lineNumber = leftLineNumber;
+                leftChanges.append(leftChange);
+                
+                // Count lines in the deleted text
+                int lineCount = change.text.count('\n');
+                if (!change.text.isEmpty() && !change.text.endsWith('\n')) {
+                    lineCount++;
+                }
+                leftLineNumber += lineCount;
+                
+                // Add empty lines to right side for alignment
+                for (int i = 0; i < lineCount; i++) {
+                    DiffChange emptyChange(DiffOperation::Equal, QString(), rightLineNumber + i, -1);
+                    rightChanges.append(emptyChange);
+                }
+                rightLineNumber += lineCount;
+            }
+            break;
+            
+        case DiffOperation::Insert:
+            // Insert operations only appear on the right side
+            {
+                DiffChange rightChange = change;
+                rightChange.lineNumber = rightLineNumber;
+                rightChanges.append(rightChange);
+                
+                // Count lines in the inserted text
+                int lineCount = change.text.count('\n');
+                if (!change.text.isEmpty() && !change.text.endsWith('\n')) {
+                    lineCount++;
+                }
+                rightLineNumber += lineCount;
+                
+                // Add empty lines to left side for alignment
+                for (int i = 0; i < lineCount; i++) {
+                    DiffChange emptyChange(DiffOperation::Equal, QString(), leftLineNumber + i, -1);
+                    leftChanges.append(emptyChange);
+                }
+                leftLineNumber += lineCount;
+            }
+            break;
+            
+        case DiffOperation::Replace:
+            // Replace operations are split into Delete (left) + Insert (right)
+            {
+                // Create delete operation for left side
+                DiffChange leftChange(DiffOperation::Delete, change.text, leftLineNumber, change.position);
+                leftChanges.append(leftChange);
+                
+                // For replace operations, we need to get the replacement text
+                // Since the unified diff doesn't directly provide this, we'll treat it as delete + insert
+                // The actual replacement text should be in the next Insert operation
+                
+                int leftLineCount = change.text.count('\n');
+                if (!change.text.isEmpty() && !change.text.endsWith('\n')) {
+                    leftLineCount++;
+                }
+                leftLineNumber += leftLineCount;
+                
+                // For now, we'll add empty lines to the right side
+                // In a more sophisticated implementation, we would look ahead for the corresponding Insert
+                for (int i = 0; i < leftLineCount; i++) {
+                    DiffChange emptyChange(DiffOperation::Equal, QString(), rightLineNumber + i, -1);
+                    rightChanges.append(emptyChange);
+                }
+                rightLineNumber += leftLineCount;
+            }
+            break;
+        }
+    }
+    
+    result.leftSide.setChanges(leftChanges);
+    result.rightSide.setChanges(rightChanges);
+    
+    return result;
 }
 
 }//namespace QDiffX
