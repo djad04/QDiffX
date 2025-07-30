@@ -37,9 +37,7 @@ void QDiffWidget::setupUI()
 
     m_splitter = new QSplitter(Qt::Horizontal);
     m_leftTextBrowser = new QDiffX::QDiffTextBrowser();
-    m_leftTextBrowser->setIsLeftBrowser(true);
     m_rightTextBrowser = new QDiffX::QDiffTextBrowser();
-    m_rightTextBrowser->setIsLeftBrowser(false);
     m_splitter->addWidget(m_leftTextBrowser);
     m_splitter->addWidget(m_rightTextBrowser);
 
