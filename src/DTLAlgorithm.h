@@ -19,7 +19,6 @@ public:
 
     // diff methods
     QList<DiffChange> diffLineByLine(const QString &leftFile, const QString &rightFile);
-    QList<DiffChange> diffCharByChar(const QString &leftFile, const QString &rightFile);
 
     QString getName() const override { return "DTL-Diff-Template-Library-Algorithm"; }
     QString getDescription() const override {
@@ -41,7 +40,6 @@ public:
 private:
     // DTL conversion helpers
     QList<DiffChange> convertDTLSequence(const dtl::Diff<QString> &dtlDiff) const;
-    QList<DiffChange> convertDTLSequenceChar(const dtl::Diff<QChar> &dtlDiff) const;
     DiffOperation convertDTLOperation(dtl::edit_t dtlOp) const;
     void calculateLineNumbers(QList<DiffChange> &changes, const QString &leftFile, const QString &rightFile) const;
 
