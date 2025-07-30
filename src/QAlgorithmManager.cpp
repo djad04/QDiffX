@@ -221,7 +221,7 @@ QSideBySideDiffResult QAlgorithmManager::calculateSideBySideDiffSync(const QStri
     // Apply the dividing function to convert to side-by-side format
     QSideBySideDiffResult result = divideDiffForSideBySide(unifiedResult, algorithmUsed);
     
-    if (result.success) {
+    if (result.success()) {
         emit sideBySideDiffCalculated(result);
     }
     
@@ -404,7 +404,7 @@ QDiffResult QAlgorithmManager::executeAlgorithm(const QString& algorithmId, cons
         return failResult;
     }
 
-    QDiffResult result = algorithm->calculateDiff(leftText, rightText);
+    QDiffResult result = algorithm->calculateDiff(leftText, rightText, DiffMode::LineByLine);
     m_isCalculating = false;
 
     if (!result.success()) {
@@ -461,7 +461,6 @@ QSideBySideDiffResult QAlgorithmManager::divideDiffForSideBySide(const QDiffResu
 {
     QSideBySideDiffResult result;
     result.algorithmUsed = algorithmUsed;
-    result.success = true;
     
     // Initialize the left and right side results
     result.leftSide.setSuccess(true);
@@ -567,9 +566,9 @@ QSideBySideDiffResult QAlgorithmManager::divideDiffForSideBySide(const QDiffResu
                 // For now, we'll add empty lines to the right side
                 // In a more sophisticated implementation, we would look ahead for the corresponding Insert
                 for (int i = 0; i < leftLineCount; i++) {
-                    DiffChange emptyChange(DiffOperation::Equal, QString(), rightLineNumber + i, -1);
-                    rightChanges.append(emptyChange);
-                }
+                        DiffChange emptyChange(DiffOperation::Equal, QString(), rightLineNumber + i, -1);
+                        rightChanges.append(emptyChange);
+                    }
                 rightLineNumber += leftLineCount;
             }
             break;

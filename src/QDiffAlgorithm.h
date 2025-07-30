@@ -86,7 +86,7 @@ struct QSideBySideDiffResult {
     QString algorithmUsed;    // Which algorithm was used
     
 
-    QSideBySideDiffResult() : success(false) {}
+    QSideBySideDiffResult()  {}
     
     // Error constructor
     QSideBySideDiffResult(const QString& errorMessage) 
