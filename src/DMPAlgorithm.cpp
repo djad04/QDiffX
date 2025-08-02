@@ -51,9 +51,6 @@ QDiffX::QDiffResult QDiffX::DMPAlgorithm::calculateDiff(const QString &leftFile,
 
         QList<QDiffX::DiffChange> changes = convertDiffList(dmpChanges);
 
-        // Calculate line numbers for the changes
-        calculateLineNumbers(changes, leftFile, rightFile);
-
         result.setChanges(changes);
         result.setSuccess(true);
 
@@ -74,26 +71,33 @@ QDiffX::QDiffResult QDiffX::DMPAlgorithm::calculateDiff(const QString &leftFile,
 }
 QList<Diff> DMPAlgorithm::diffCharByChar(const QString &leftFile, const QString &rightFile)
 {
-    // checkLines=false for pure character-by-character comparison
     QList<Diff> diffs = m_dmp.diff_main(leftFile, rightFile, false);
 
-    // Step 2: Apply cleanup for better results
     m_dmp.diff_cleanupSemantic(diffs);
     m_dmp.diff_cleanupEfficiency(diffs);
+
 
     return diffs;
 }
 
 QList<Diff> DMPAlgorithm::diffLineByLine(const QString &leftFile, const QString &rightFile)
 {
-    // Use DMP's integrated line mode by setting checklines=true
-    QList<Diff> diffs = m_dmp.diff_main(leftFile, rightFile, true);
 
-    // Apply cleanup for better results
-    m_dmp.diff_cleanupSemantic(diffs);
-    m_dmp.diff_cleanupEfficiency(diffs);
+    QList<QVariant> lineResult = m_dmp.diff_linesToChars(leftFile, rightFile);
 
-    return diffs;
+    // Extract the elements:
+    QString chars1 = lineResult[0].toString();
+    QString chars2 = lineResult[1].toString();
+    QStringList lineArray = lineResult[2].toStringList(); // line mapping
+
+    // Diff the encoded strings
+    QList<Diff> lineDiffs = m_dmp.diff_main(chars1, chars2);
+
+    // Convert back to lines
+    m_dmp.diff_charsToLines(lineDiffs, lineArray);
+
+
+    return lineDiffs;
 }
 
 AlgorithmCapabilities DMPAlgorithm::getCapabilities() const
@@ -182,12 +186,13 @@ QList<DiffChange> DMPAlgorithm::convertDiffList(const QList<Diff> &dmpDiffs) con
 {
     QList<QDiffX::DiffChange> changes;
     int position =0;
+    int line = 1;
 
     for(auto &diff : dmpDiffs){
         DiffChange change;
         change.operation = convertOperation(diff.operation) ;
         change.text = diff.text ;
-        change.lineNumber = -1; // will be calculated later using calculateLineNumbers()
+        change.lineNumber = line; // will be calculated later using calculateLineNumbers()
         change.position = position;
 
         changes.append(change);
@@ -195,6 +200,7 @@ QList<DiffChange> DMPAlgorithm::convertDiffList(const QList<Diff> &dmpDiffs) con
         if (diff.operation != DELETE) {
             position += diff.text.length();
         }
+        line++;
     }
     return changes;
 }
