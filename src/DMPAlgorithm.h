@@ -18,7 +18,7 @@ public:
     // QDiffAlgorithm interface Implementation
     QDiffResult calculateDiff(const QString &leftFile, const QString &rightFile, DiffMode = DiffMode::Auto) override;
 
-    QList<Diff> diffCharByChar(const QString &leftFile, const QString &rightFile);
+    QList<Diff> diffWordByWord(const QString &leftFile, const QString &rightFile);
     QList<Diff> diffLineByLine(const QString &leftFile, const QString &rightFile);
 
     QString getName() const override { return "Diff-Match-Patch-GoogleAlgorithme-Modernized"; }
@@ -37,10 +37,12 @@ public:
     bool isRecommendedFor(const QString &leftText, const QString &rightText) const override;
 
     double calculateSimilarity(const QList<DiffChange> &changes, const QString &leftText, const QString &rightText) const;
+
 private:
     DiffOperation convertOperation(Operation dmpOp) const;
     QList<DiffChange> convertDiffList(const QList<Diff>& dmpDiffs) const;
     void calculateLineNumbers(QList<DiffChange> &changes,const QString &leftFile,const QString rightFile) const;
+    
 
 private:
 
