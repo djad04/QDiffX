@@ -57,12 +57,19 @@ void QDiffTextBrowser::setDiffResult(const QDiffResult &result)
     QMap<int, QString> lineContent;
     int maxLineNumber = -1;
 
-    for (const auto &change : result.changes()) {
+    int offset = 0;
+    for (auto &change : result.changes()) {
+        if(!change.text.endsWith("\n"))
+            change.text += '\n';
+
         if (change.lineNumber >= 0) {
             lineContent[change.lineNumber] = change.text;
-            m_lineOperations[change.lineNumber] = change.operation;
-            maxLineNumber = qMax(maxLineNumber, change.lineNumber);
+            for(int i = 0 ; i < change.text.count("\n") ; i++){
+            m_lineOperations[change.lineNumber + i + offset] = change.operation;
+            }
+            maxLineNumber = qMax(maxLineNumber, change.lineNumber + offset);
         }
+        offset += change.text.count("\n") - 1;
     }
 
     // Build the document content
@@ -75,7 +82,7 @@ void QDiffTextBrowser::setDiffResult(const QDiffResult &result)
             lines.append(lineContent[i]);
         } else {
             lines.append(QString()); // Empty line
-            m_lineOperations[i] = DiffOperation::Equal;
+            m_lineOperations[i + offset] = DiffOperation::Equal;
         }
     }
 
@@ -86,7 +93,7 @@ void QDiffTextBrowser::setDiffResult(const QDiffResult &result)
         }
     }
 
-    content = lines.join('\n');
+    content = lines.join(' ');
     setPlainText(content);
 
     applyBlockSpacing();

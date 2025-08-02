@@ -73,16 +73,7 @@ QDiffX::QDiffResult QDiffX::DMPAlgorithm::calculateDiff(const QString &leftFile,
 
     return result;
 }
-QList<Diff> DMPAlgorithm::diffCharByChar(const QString &leftFile, const QString &rightFile)
-{
-    QList<Diff> diffs = m_dmp.diff_main(leftFile, rightFile, false);
 
-    m_dmp.diff_cleanupSemantic(diffs);
-    m_dmp.diff_cleanupEfficiency(diffs);
-
-
-    return diffs;
-}
 
 QList<Diff> DMPAlgorithm::diffWordByWord(const QString &leftFile, const QString &rightFile)
 {
