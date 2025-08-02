@@ -1,4 +1,9 @@
 #include "DMPAlgorithm.h"
+#include <QRegularExpression>
+#include <QRegularExpressionMatchIterator>
+#include <QMap>
+#include <QChar>
+#include <QDebug>
 
 namespace QDiffX{
 
@@ -36,23 +41,19 @@ QDiffX::QDiffResult QDiffX::DMPAlgorithm::calculateDiff(const QString &leftFile,
             dmpChanges = diffLineByLine(leftFile, rightFile);
             break;
 
-        case DiffMode::CharByChar:
-            dmpChanges = diffCharByChar(leftFile, rightFile);
+        case DiffMode::WordByWord:
+            dmpChanges = diffWordByWord(leftFile, rightFile);
             break;
 
         case DiffMode::Auto:
         default:
-            dmpChanges = m_dmp.diff_main(leftFile, rightFile);
-            m_dmp.diff_cleanupSemantic(dmpChanges);
-            m_dmp.diff_cleanupEfficiency(dmpChanges);
+         dmpChanges = diffLineByLine(leftFile, rightFile);
+          
             break;
         }
 
 
         QList<QDiffX::DiffChange> changes = convertDiffList(dmpChanges);
-
-        // Calculate line numbers for the changes
-        calculateLineNumbers(changes, leftFile, rightFile);
 
         result.setChanges(changes);
         result.setSuccess(true);
@@ -61,7 +62,7 @@ QDiffX::QDiffResult QDiffX::DMPAlgorithm::calculateDiff(const QString &leftFile,
         QMap<QString, QVariant> metadata;
         metadata["algorithm"] = "DMP";
         metadata["mode"] = (mode == DiffMode::LineByLine) ? "line" :
-                               (mode == DiffMode::CharByChar) ? "char" : "auto";
+                               (mode == DiffMode::WordByWord) ? "word" : "auto";
         metadata["total_changes"] = changes.size();
         result.setMetaData(metadata);
 
@@ -72,28 +73,62 @@ QDiffX::QDiffResult QDiffX::DMPAlgorithm::calculateDiff(const QString &leftFile,
 
     return result;
 }
-QList<Diff> DMPAlgorithm::diffCharByChar(const QString &leftFile, const QString &rightFile)
-{
-    // checkLines=false for pure character-by-character comparison
-    QList<Diff> diffs = m_dmp.diff_main(leftFile, rightFile, false);
 
-    // Step 2: Apply cleanup for better results
-    m_dmp.diff_cleanupSemantic(diffs);
-    m_dmp.diff_cleanupEfficiency(diffs);
+
+QList<Diff> DMPAlgorithm::diffWordByWord(const QString &leftFile, const QString &rightFile)
+{
+    QString modifiedLeft = leftFile;
+    QString modifiedRight = rightFile;
+
+
+    modifiedLeft.replace("\n", "§NEWLINE§");
+    modifiedRight.replace("\n", "§NEWLINE§");
+
+    // Replace spaces with newlines temporarily
+    modifiedLeft.replace(" ", "\n");
+    modifiedRight.replace(" ", "\n");
+
+    QList<QVariant> result = m_dmp.diff_linesToChars(modifiedLeft, modifiedRight);
+
+    QString chars1 = result[0].toString();
+    QString chars2 = result[1].toString();
+    QStringList lineArray = result[2].toStringList();
+    qDebug()<< result[0].toString() << "\n" << result[1].toString() << "\n"<< result[2].toStringList(); ;
+
+    QList<Diff> diffs = m_dmp.diff_main(chars1, chars2);
+    m_dmp.diff_charsToLines(diffs, lineArray);
+
+
+    for (Diff &diff : diffs) {
+     diff.text.replace("\n", " ");
+     diff.text.replace("§NEWLINE§", "\n");
+     qDebug() << diff.toString() << "\n";
+    }
+
 
     return diffs;
 }
 
+
+
 QList<Diff> DMPAlgorithm::diffLineByLine(const QString &leftFile, const QString &rightFile)
 {
-    // Use DMP's integrated line mode by setting checklines=true
-    QList<Diff> diffs = m_dmp.diff_main(leftFile, rightFile, true);
 
-    // Apply cleanup for better results
-    m_dmp.diff_cleanupSemantic(diffs);
-    m_dmp.diff_cleanupEfficiency(diffs);
+    QList<QVariant> lineResult = m_dmp.diff_linesToChars(leftFile, rightFile);
 
-    return diffs;
+    // Extract the elements:
+    QString chars1 = lineResult[0].toString();
+    QString chars2 = lineResult[1].toString();
+    QStringList lineArray = lineResult[2].toStringList(); // line mapping
+
+    // Diff the encoded strings
+    QList<Diff> lineDiffs = m_dmp.diff_main(chars1, chars2);
+
+    // Convert back to lines
+    m_dmp.diff_charsToLines(lineDiffs, lineArray);
+
+
+    return lineDiffs;
 }
 
 AlgorithmCapabilities DMPAlgorithm::getCapabilities() const
@@ -102,9 +137,9 @@ AlgorithmCapabilities DMPAlgorithm::getCapabilities() const
     caps.supportsLargeFiles = false;
     caps.supportsUnicode = true;
     caps.supportsBinary = false;
-    caps.supportsLineByLine = true;   // Has diff_lineMode()
-    caps.supportsCharByChar = true;   // Default character-level precision
-    caps.supportsWordByWord = false;
+    caps.supportsLineByLine = true;
+    caps.supportsCharByChar = false;
+    caps.supportsWordByWord = true;
     caps.maxRecommendedSize = 1024 * 1024;
     caps.description = "Reimplemented Google diff-match-patch,deprecated Qt4 components Replaced and updated to modern C++, optimized performance";
 
@@ -182,12 +217,13 @@ QList<DiffChange> DMPAlgorithm::convertDiffList(const QList<Diff> &dmpDiffs) con
 {
     QList<QDiffX::DiffChange> changes;
     int position =0;
+    int line = 1;
 
     for(auto &diff : dmpDiffs){
         DiffChange change;
         change.operation = convertOperation(diff.operation) ;
         change.text = diff.text ;
-        change.lineNumber = -1; // will be calculated later using calculateLineNumbers()
+        change.lineNumber = line; // will be calculated later using calculateLineNumbers()
         change.position = position;
 
         changes.append(change);
@@ -195,6 +231,7 @@ QList<DiffChange> DMPAlgorithm::convertDiffList(const QList<Diff> &dmpDiffs) con
         if (diff.operation != DELETE) {
             position += diff.text.length();
         }
+        line++;
     }
     return changes;
 }

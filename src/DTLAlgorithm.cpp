@@ -33,29 +33,15 @@ QDiffResult DTLAlgorithm::calculateDiff(const QString &leftFile, const QString &
             changes = diffLineByLine(leftFile, rightFile);
             break;
 
-        case DiffMode::CharByChar:
-            changes = diffCharByChar(leftFile, rightFile);
-            break;
+
 
         case DiffMode::Auto:
         default: {
-            // Auto mode: choose based on file size and content
-            int totalSize = leftFile.length() + rightFile.length();
-            QVariant threshold = getConfiguration().value(CONFIG_LARGE_FILE_THRESHOLD, 1024 * 1024);
-
-            if (totalSize > threshold.toInt()) {
-                // Large files: use line-by-line for better performance
-                changes = diffLineByLine(leftFile, rightFile);
-            } else {
-                // Small files: use character-by-character for precision
-                changes = diffCharByChar(leftFile, rightFile);
-            }
+            changes = diffLineByLine(leftFile, rightFile);
             break;
         }
         }
 
-        // Calculate line numbers for the changes
-        calculateLineNumbers(changes, leftFile, rightFile);
 
         result.setChanges(changes);
         result.setSuccess(true);
@@ -64,8 +50,7 @@ QDiffResult DTLAlgorithm::calculateDiff(const QString &leftFile, const QString &
         QMap<QString, QVariant> metadata;
         metadata["algorithm"] = "DTL";
         metadata["algorithm_name"] = getName();
-        metadata["mode"] = (mode == DiffMode::LineByLine) ? "line" :
-                               (mode == DiffMode::CharByChar) ? "char" : "auto";
+        metadata["mode"] = (mode == DiffMode::LineByLine) ? "line" : "auto";
         metadata["total_changes"] = changes.size();
         result.setMetaData(metadata);
 
@@ -95,19 +80,7 @@ QList<DiffChange> DTLAlgorithm::diffLineByLine(const QString &leftFile, const QS
     return convertDTLSequence(dtlDiff);
 }
 
-QList<DiffChange> DTLAlgorithm::diffCharByChar(const QString &leftFile, const QString &rightFile)
-{
-    // Convert strings to character vectors for DTL
-    std::vector<QChar> leftChars(leftFile.begin(), leftFile.end());
-    std::vector<QChar> rightChars(rightFile.begin(), rightFile.end());
 
-    // Create DTL diff object and calculate differences
-    dtl::Diff<QChar> dtlDiff(leftChars, rightChars);
-    dtlDiff.compose();
-
-    // Convert DTL result to QDiffX format
-    return convertDTLSequenceChar(dtlDiff);
-}
 
 
 // ----------------------- Algorithm Info -------------------------
@@ -119,7 +92,7 @@ AlgorithmCapabilities DTLAlgorithm::getCapabilities() const
     caps.supportsUnicode = true;
     caps.supportsBinary = false;           // Text-based algorithm
     caps.supportsLineByLine = true;        // Primary strength
-    caps.supportsCharByChar = true;        // Also supported
+    caps.supportsCharByChar = false;        // Also supported
     caps.supportsWordByWord = false;       // Not implemented
     caps.maxRecommendedSize = 10 * 1024 * 1024; // 10MB
     caps.description = "High-performance DTL (Diff Template Library) algorithm optimized for large files and line-based comparisons";
@@ -183,12 +156,13 @@ QList<DiffChange> DTLAlgorithm::convertDTLSequence(const dtl::Diff<QString> &dtl
     QList<DiffChange> changes;
     auto ses = dtlDiff.getSes();
     int position = 0;
+    int line = 1;
 
     for (const auto &edit : ses.getSequence()) {
         DiffChange change;
         change.operation = convertDTLOperation(edit.second.type);
         change.text = edit.first;
-        change.lineNumber = -1; // Will be calculated later
+        change.lineNumber = line; // Will be calculated later
         change.position = position;
 
         changes.append(change);
@@ -197,34 +171,13 @@ QList<DiffChange> DTLAlgorithm::convertDTLSequence(const dtl::Diff<QString> &dtl
         if (edit.second.type != dtl::SES_DELETE) {
             position += edit.first.length();
         }
+        line++;
     }
 
     return changes;
 }
 
-QList<DiffChange> DTLAlgorithm::convertDTLSequenceChar(const dtl::Diff<QChar> &dtlDiff) const
-{
-    QList<DiffChange> changes;
-    auto ses = dtlDiff.getSes();
-    int position = 0;
 
-    for (const auto &edit : ses.getSequence()) {
-        DiffChange change;
-        change.operation = convertDTLOperation(edit.second.type);
-        change.text = QString(edit.first); // Convert QChar to QString
-        change.lineNumber = -1; // Will be calculated later
-        change.position = position;
-
-        changes.append(change);
-
-        // Update position (don't advance for deletions)
-        if (edit.second.type != dtl::SES_DELETE) {
-            position += change.text.length();
-        }
-    }
-
-    return changes;
-}
 
 DiffOperation DTLAlgorithm::convertDTLOperation(dtl::edit_t dtlOp) const
 {
@@ -243,17 +196,14 @@ DiffOperation DTLAlgorithm::convertDTLOperation(dtl::edit_t dtlOp) const
 void DTLAlgorithm::calculateLineNumbers(QList<DiffChange> &changes, const QString &leftFile, const QString &rightFile) const
 {
     int leftLine = 1, rightLine = 1;
+    int line = 1;
     int leftPos = 0, rightPos = 0;
 
     for (auto &change : changes) {
         switch (change.operation) {
         case DiffOperation::Equal:{
-            change.lineNumber = leftLine;
-            int lineJumps = change.text.count('\n');
-            leftLine += lineJumps;
-            rightLine += lineJumps;
-            leftPos += change.text.length();
-            rightPos += change.text.length();
+            change.lineNumber = line;
+            line++ ;
             break;}
 
         case DiffOperation::Delete:
