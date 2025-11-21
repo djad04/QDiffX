@@ -17,7 +17,9 @@ int main(int argc, char *argv[])
             break;
         }
     }
-    QDiffWidget w;
+    QDiffX::QDiffWidget w;
+    w.setContent("sdnk\nlsdk\nf\n", "aknf\nakf\nlkfn\n");
+    w.setGeometry(0,0,400,800);
     w.show();
     return a.exec();
 }

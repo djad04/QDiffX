@@ -24,8 +24,7 @@
  * - Cross-platform compatibility
  */
 
-#ifndef DIFF_MATCH_PATCH_H
-#define DIFF_MATCH_PATCH_H
+#pragma once
 
 // Qt includes
 #include <QString>
@@ -256,7 +255,7 @@ class diff_match_patch {
    *     encoded text2 and the List of unique strings.  The zeroth element
    *     of the List of unique strings is intentionally blank.
    */
- protected:
+ public:
   QList<QVariant> diff_linesToChars(const QString &text1, const QString &text2); // return elems 0 and 1 are QString, elem 2 is QStringList
 
   /**
@@ -277,7 +276,7 @@ class diff_match_patch {
    * @param diffs LinkedList of Diff objects.
    * @param lineArray List of unique strings.
    */
- private:
+ public:
   void diff_charsToLines(QList<Diff> &diffs, const QStringList &lineArray);
 
   /**
@@ -621,5 +620,3 @@ class diff_match_patch {
     return (pos == str.length()) ? QString("") : str.mid(pos, len);
   }
 };
-
-#endif // DIFF_MATCH_PATCH_H

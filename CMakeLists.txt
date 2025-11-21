@@ -9,56 +9,96 @@ set(CMAKE_AUTORCC ON)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-find_package(QT NAMES Qt6 Qt5 REQUIRED COMPONENTS Widgets LinguistTools)
-find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Widgets LinguistTools)
+if(MSVC)
+   add_compile_options(/permissive- /Zc:__cplusplus)
+endif()
+
+find_package(QT NAMES Qt6 Qt5 REQUIRED COMPONENTS Core Widgets LinguistTools)
+find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Core Widgets LinguistTools)
 
 set(TS_FILES src/QDiffX_en_150.ts)
 
 set(PROJECT_SOURCES
-        main.cpp
-        src/QDiffWidget.cpp
-        src/QDiffWidget.h
-        ${TS_FILES}
+    main.cpp
+    src/QDiffWidget.cpp
+    src/QDiffTextBrowser.cpp
+    src/QLineNumberArea.cpp
 )
+set(PROJECT_HEADERS
+    src/QDiffWidget.h
+    src/QDiffTextBrowser.h
+    src/QLineNumberArea.h
+)
+
+set(QDIFFX_CORE_SOURCES
+    src/DMP/diff_match_patch.cpp
+    src/DTLAlgorithm.cpp
+    src/DMPAlgorithm.cpp
+    src/QAlgorithmRegistry.cpp
+    src/QAlgorithmManager.cpp
+    src/QAlgorithmException.cpp
+)
+
+set(QDIFFX_CORE_HEADERS
+    src/DMP/diff_match_patch.h
+    src/DTLAlgorithm.h
+    src/DMPAlgorithm.h
+    src/QAlgorithmManager.h
+    src/QAlgorithmRegistry.h
+    src/QAlgorithmException.h
+    src/QAlgorithmManagerError.h
+    src/QDiffAlgorithm.h
+    src/dtl/Diff.hpp
+    src/dtl/Diff3.hpp
+    src/dtl/dtl.hpp
+    src/dtl/functors.hpp
+    src/dtl/Lcs.hpp
+    src/dtl/Sequence.hpp
+    src/dtl/Ses.hpp
+    src/dtl/variables.hpp
+)
+
+add_library(QDiffXCore STATIC ${QDIFFX_CORE_SOURCES})
+target_sources(QDiffXCore PUBLIC FILE_SET HEADERS FILES ${QDIFFX_CORE_HEADERS})
+
+target_include_directories(QDiffXCore PRIVATE ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(QDiffXCore PRIVATE Qt${QT_VERSION_MAJOR}::Core Qt${QT_VERSION_MAJOR}::Widgets)
 
 if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
     qt_add_executable(QDiffX
         MANUAL_FINALIZATION
         ${PROJECT_SOURCES}
-        src/DMP/diff_match_patch.h
-        src/DMP/diff_match_patch.cpp
-        src/dtl/Diff.hpp src/dtl/Diff3.hpp src/dtl/dtl.hpp src/dtl/functors.hpp src/dtl/Lcs.hpp src/dtl/Sequence.hpp src/dtl/Ses.hpp src/dtl/variables.hpp
-
+        ${PROJECT_HEADERS}
+        ${TS_FILES}
     )
 # Define target properties for Android with Qt 6 as:
 #    set_property(TARGET QDiffX APPEND PROPERTY QT_ANDROID_PACKAGE_SOURCE_DIR
 #                 ${CMAKE_CURRENT_SOURCE_DIR}/android)
 # For more information, see https://doc.qt.io/qt-6/qt-add-executable.html#target-creation
-    target_include_directories(QDiffX PRIVATE ${CMAKE_SOURCE_DIR}/src)
-    qt_create_translation(QM_FILES ${CMAKE_SOURCE_DIR} ${TS_FILES})
+target_link_libraries(QDiffX PRIVATE Qt${QT_VERSION_MAJOR}::Core Qt${QT_VERSION_MAJOR}::Widgets QDiffXCore)
+target_include_directories(QDiffX PRIVATE ${CMAKE_SOURCE_DIR}/src)
+qt_create_translation(QM_FILES ${CMAKE_SOURCE_DIR} ${TS_FILES})
 else()
     if(ANDROID)
         add_library(QDiffX SHARED
             ${PROJECT_SOURCES}
         )
-# Define properties for Android with Qt 5 after find_package() calls as:
-#    set(ANDROID_PACKAGE_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/android")
-    else()
-        add_executable(QDiffX
-            ${PROJECT_SOURCES}
-        )
-    endif()
-
-    qt5_create_translation(QM_FILES ${CMAKE_SOURCE_DIR} ${TS_FILES})
+    # Define properties for Android with Qt 5 after find_package() calls as:
+    #    set(ANDROID_PACKAGE_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/android")
+else()
+    add_executable(QDiffX
+        ${PROJECT_SOURCES}
+    )
 endif()
 
-target_link_libraries(QDiffX PRIVATE Qt${QT_VERSION_MAJOR}::Widgets)
+qt5_create_translation(QM_FILES ${CMAKE_SOURCE_DIR} ${TS_FILES})
+endif()
 
 # Qt for iOS sets MACOSX_BUNDLE_GUI_IDENTIFIER automatically since Qt 6.1.
 # If you are developing for iOS or macOS you should consider setting an
 # explicit, fixed bundle identifier manually though.
 if(${QT_VERSION} VERSION_LESS 6.1.0)
-  set(BUNDLE_ID_OPTION MACOSX_BUNDLE_GUI_IDENTIFIER com.example.QDiffX)
+    set(BUNDLE_ID_OPTION MACOSX_BUNDLE_GUI_IDENTIFIER com.example.QDiffX)
 endif()
 set_target_properties(QDiffX PROPERTIES
     ${BUNDLE_ID_OPTION}
@@ -77,4 +117,10 @@ install(TARGETS QDiffX
 
 if(QT_VERSION_MAJOR EQUAL 6)
     qt_finalize_executable(QDiffX)
+endif()
+
+# Add unit tests
+option(BUILD_TESTING "Build unit tests" ON)
+if(BUILD_TESTING)
+    add_subdirectory(tests)
 endif()
