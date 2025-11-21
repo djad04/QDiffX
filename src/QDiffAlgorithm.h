@@ -80,6 +80,35 @@ private:
 };
 
 
+struct QSideBySideDiffResult {
+    QDiffResult leftSide;     // Contains Equal + Delete operations only  
+    QDiffResult rightSide;    // Contains Equal + Insert operations only
+    QString algorithmUsed;    // Which algorithm was used
+    
+
+    QSideBySideDiffResult()  {}
+    
+    // Error constructor
+    QSideBySideDiffResult(const QString& errorMessage) 
+        : leftSide(errorMessage), rightSide(errorMessage) {}
+    
+    
+    QSideBySideDiffResult(const QDiffResult& left, const QDiffResult& right, const QString& algorithm)
+        : leftSide(left), rightSide(right), algorithmUsed(algorithm) {}
+    
+    
+    bool success() const { 
+        return leftSide.success() && rightSide.success(); 
+    }
+    
+    QString errorMessage() const {
+        if (!leftSide.success()) return leftSide.errorMessage();
+        if (!rightSide.success()) return rightSide.errorMessage();
+        return QString();
+    }
+};
+
+
 class QDiffAlgorithm{
 public:
     virtual ~QDiffAlgorithm() = default;

@@ -4,6 +4,7 @@
 #include <QTextBrowser>
 #include <QDiffTextBrowser.h>
 #include <QWidget>
+#include "QAlgorithmManager.h"
 
 namespace QDiffX {
 
@@ -48,6 +49,14 @@ public:
     FileOperationResult lastError() const;
     QString errorMessage(FileOperationResult result) const;
 
+    // Display Mode Management:
+    DisplayMode displayMode() const;
+    void setDisplayMode(DisplayMode mode);
+
+    // Algorithm Manager Integration:
+    void setAlgorithmManager(QAlgorithmManager* manager);
+    QAlgorithmManager* algorithmManager() const;
+
     // Content retrieval :
     QString leftContent() const;
     QString rightContent() const;
@@ -62,10 +71,16 @@ public:
 signals:
     void contentChanged();
 
+private slots:
+    void onDiffCalculated(const QDiffX::QDiffResult& result);
+    void onSideBySideDiffCalculated(const QDiffX::QSideBySideDiffResult& result);
+
 private:
     void setupUI();
     void updateDiff();
     void setupConnections();
+    void connectAlgorithmManagerSignals();
+    void disconnectAlgorithmManagerSignals();
 
     // Helper Functions
     QString readFileToQString(const QString &filePath, FileOperationResult &result);
@@ -80,8 +95,16 @@ private:
     QString m_leftLabel;
     QString m_rightLabel;
 
+    // Display and Algorithm Management
+    DisplayMode m_displayMode = DisplayMode::SideBySide;
+    QAlgorithmManager* m_algorithmManager = nullptr;
+
     // Error Handeling
     FileOperationResult m_lastError = FileOperationResult::Success;
+
+    // Helper methods for diff display
+    void displayUnifiedDiff(const QDiffResult& result);
+    void displaySideBySideDiff(const QSideBySideDiffResult& result);
 
 };
 

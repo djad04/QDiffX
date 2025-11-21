@@ -10,7 +10,6 @@ namespace QDiffX {
 
 
 
-
 enum class QAlgorithmSelectionMode{
     Auto,
     Manual
@@ -20,6 +19,9 @@ enum class QExecutionMode{
     Asynchronous,
     Synchronous
 };
+
+
+
 
 class QAlgorithmManager : public QObject
 {
@@ -54,6 +56,19 @@ public:
                                            const QString& leftText,
                                            const QString& rightText);
 
+    // Side-by-side diff functions
+    QFuture<QSideBySideDiffResult> calculateSideBySideDiff(const QString &leftText, const QString &rightText,
+                                                          QExecutionMode executionMode = QExecutionMode::Asynchronous,
+                                                          QAlgorithmSelectionMode selectionMode = QAlgorithmSelectionMode::Auto,
+                                                          QString algorithmId = QString());
+
+    QFuture<QSideBySideDiffResult> calculateSideBySideDiffAsync(const QString &leftText, const QString &rightText,
+                                                               QAlgorithmSelectionMode selectionMode = QAlgorithmSelectionMode::Auto,
+                                                               QString algorithmId = QString());
+
+    QSideBySideDiffResult calculateSideBySideDiffSync(const QString &leftText, const QString &rightText,
+                                                     QAlgorithmSelectionMode selectionMode = QAlgorithmSelectionMode::Auto,
+                                                     QString algorithmId = QString());
 
     bool isAlgorithmAvailable(const QString &algorithmId) const;
 
@@ -100,6 +115,7 @@ signals:
     void calculationStarted();
     void calculationFinished(const QDiffX::QDiffResult& result);
     void algorithmConfigurationChanged(const QString& algorithmId, const QMap<QString, QVariant>& config);
+    void sideBySideDiffCalculated(const QDiffX::QSideBySideDiffResult &result);
 
 private:
     void setLastError(QAlgorithmManagerError newLastError);
@@ -108,6 +124,7 @@ private:
                                  const QString& rightText);
     QString autoSelectAlgorithm (const QString& leftText,
                                 const QString& rightText) const;
+    QSideBySideDiffResult divideDiffForSideBySide(const QDiffResult& unifiedResult, const QString& algorithmUsed);
 private:
     QAlgorithmSelectionMode m_selectionMode;
     QExecutionMode m_executionMode;
