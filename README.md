@@ -26,7 +26,7 @@
 
 ---
 
-##  What Makes It Unstoppable
+##  What Makes It Special
 
 ```cpp
 // Literally this simple
