@@ -112,7 +112,7 @@ private:
     // Toolbar controls
     QPushButton* m_themeButton = nullptr;
     QComboBox* m_algorithmCombo = nullptr;
-    QPushButton* m_displayModeButton = nullptr;
+    QComboBox* m_displayModeCombo = nullptr;
     QCheckBox* m_syncScrollCheck = nullptr;
 
     // Visibility flags for controls (default: enabled)

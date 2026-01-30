@@ -74,6 +74,7 @@ void QDiffWidget::setupUI()
         connect(m_algorithmCombo, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this](int idx){
             if (!m_algorithmManager || idx < 0) return;
             QString id = m_algorithmCombo->itemText(idx);
+            m_algorithmManager->setSelectionMode(QAlgorithmSelectionMode::Manual);
             m_algorithmManager->setCurrentAlgorithm(id);
             updateDiff();
         });
@@ -83,12 +84,14 @@ void QDiffWidget::setupUI()
     toolbarLayout->addStretch();
 
     if (m_showDisplayModeButtons) {
-        m_displayModeButton = new QPushButton(tr("Toggle Inline/Side"));
-        connect(m_displayModeButton, &QPushButton::clicked, this, [this]() {
-            if (m_displayMode == DisplayMode::SideBySide) setDisplayMode(DisplayMode::Inline);
-            else setDisplayMode(DisplayMode::SideBySide);
+        m_displayModeCombo = new QComboBox();
+        m_displayModeCombo->addItem(tr("Side by Side"));
+        m_displayModeCombo->addItem(tr("Inline"));
+        m_displayModeCombo->setCurrentIndex(m_displayMode == DisplayMode::SideBySide ? 0 : 1);
+        connect(m_displayModeCombo, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this](int idx){
+            setDisplayMode(idx == 0 ? DisplayMode::SideBySide : DisplayMode::Inline);
         });
-        toolbarLayout->addWidget(m_displayModeButton);
+        toolbarLayout->addWidget(m_displayModeCombo);
     }
 
     if (m_showSyncToggle) {
@@ -124,13 +127,20 @@ void QDiffWidget::updateDiff()
         return;
     }
     
+    QString algorithmId;
+    QAlgorithmSelectionMode selMode = QAlgorithmSelectionMode::Auto;
+    if (m_algorithmManager) {
+        selMode = m_algorithmManager->selectionMode();
+        algorithmId = m_algorithmManager->currentAlgorithm();
+    }
+
     if (m_displayMode == DisplayMode::SideBySide) {
-        // Calculate side-by-side diff asynchronously
-        m_algorithmManager->calculateSideBySideDiffAsync(m_leftContent, m_rightContent);
+        // Calculate side-by-side diff asynchronously, passing selection mode and algorithm id
+        m_algorithmManager->calculateSideBySideDiffAsync(m_leftContent, m_rightContent, selMode, algorithmId);
         // Result will be handled by onSideBySideDiffCalculated slot
     } else {
         // Calculate unified diff for inline mode asynchronously
-        m_algorithmManager->calculateDiffAsync(m_leftContent, m_rightContent);
+        m_algorithmManager->calculateDiffAsync(m_leftContent, m_rightContent, selMode, algorithmId);
         // Result will be handled by onDiffCalculated slot
         // Hide right panel in inline mode
         m_rightTextBrowser->hide();
@@ -418,7 +428,7 @@ void QDiffWidget::setShowAlgorithmSelector(bool show)
 void QDiffWidget::setShowDisplayModeButtons(bool show)
 {
     m_showDisplayModeButtons = show;
-    if (m_displayModeButton) m_displayModeButton->setVisible(show);
+    if (m_displayModeCombo) m_displayModeCombo->setVisible(show);
 }
 
 void QDiffWidget::setShowSyncToggle(bool show)
@@ -462,17 +472,37 @@ void QDiffWidget::enableSyncScrolling(bool enable)
 void QDiffWidget::setTheme(Theme theme)
 {
     m_theme = theme;
-    QString leftStyle, rightStyle;
+
+    // Build a global stylesheet for the whole application/window
+    QString style;
     if (theme == Theme::Dark) {
-        leftStyle = "QTextBrowser { background-color: #1e1e1e; color: #dcdcdc; }";
-        rightStyle = leftStyle;
+        style = R"(
+            QWidget { background-color: #121212; color: #e6e6e6; }
+            QPushButton { background: qlineargradient(x1:0,y1:0,x2:0,y2:1, stop:0 #2b2b2b, stop:1 #1e1e1e); border: 1px solid #3a3a3a; padding:6px 10px; border-radius:6px; }
+            QPushButton:hover { border-color: #5a5a5a; }
+            QComboBox { background: #1f1f1f; color: #e6e6e6; border: 1px solid #333; padding:4px; }
+            QCheckBox { color: #e6e6e6; }
+            QMenu { background-color: #1b1b1b; color: #e6e6e6; }
+            QTextBrowser { background-color: #0f0f0f; color: #e6e6e6; border: none; }
+            QScrollBar:vertical { background: transparent; width:10px; }
+            QScrollBar::handle:vertical { background: #333; border-radius:5px; }
+        )";
     } else {
-        leftStyle = "QTextBrowser { background-color: white; color: black; }";
-        rightStyle = leftStyle;
+        style = R"(
+            QWidget { background-color: #f7f9fb; color: #222222; }
+            QPushButton { background: qlineargradient(x1:0,y1:0,x2:0,y2:1, stop:0 #ffffff, stop:1 #f3f6fa); border: 1px solid #d6dce6; padding:6px 10px; border-radius:6px; }
+            QPushButton:hover { border-color: #8aa0c0; }
+            QComboBox { background: white; color: #222; border: 1px solid #d0d7e0; padding:4px; }
+            QCheckBox { color: #222; }
+            QMenu { background-color: #ffffff; color: #222; }
+            QTextBrowser { background-color: #ffffff; color: #222; border: none; }
+            QScrollBar:vertical { background: transparent; width:10px; }
+            QScrollBar::handle:vertical { background: #cccccc; border-radius:5px; }
+        )";
     }
 
-    if (m_leftTextBrowser) m_leftTextBrowser->setStyleSheet(leftStyle);
-    if (m_rightTextBrowser) m_rightTextBrowser->setStyleSheet(rightStyle);
+    // Apply globally to the application so the whole window changes
+    qApp->setStyleSheet(style);
 }
 
 QAlgorithmManager* QDiffWidget::algorithmManager() const
