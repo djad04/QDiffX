@@ -94,22 +94,54 @@ void QDiffWidget::setupUI()
         toolbarLayout->addWidget(m_displayModeCombo);
     }
 
-    if (m_showSyncToggle) {
-        m_syncScrollCheck = new QCheckBox(tr("Sync Scroll"));
-        connect(m_syncScrollCheck, &QCheckBox::toggled, this, &QDiffWidget::enableSyncScrolling);
-        toolbarLayout->addWidget(m_syncScrollCheck);
-    }
+    // (Sync checkbox will be in the bottom status bar for a cleaner layout)
 
     mainLayout->addLayout(toolbarLayout);
 
-    // Main splitter and text browsers
+    // Main splitter and editor panels
     m_splitter = new QSplitter(Qt::Horizontal);
+
+    QWidget *leftPanel = new QWidget();
+    leftPanel->setObjectName("editorPanel");
+    QVBoxLayout *leftPanelLayout = new QVBoxLayout(leftPanel);
+    QLabel *leftHeader = new QLabel(m_leftLabel);
+    leftHeader->setObjectName("editorHeader");
+    leftPanelLayout->addWidget(leftHeader);
     m_leftTextBrowser = new QDiffX::QDiffTextBrowser();
+    leftPanelLayout->addWidget(m_leftTextBrowser);
+
+    QWidget *rightPanel = new QWidget();
+    rightPanel->setObjectName("editorPanel");
+    QVBoxLayout *rightPanelLayout = new QVBoxLayout(rightPanel);
+    QLabel *rightHeader = new QLabel(m_rightLabel);
+    rightHeader->setObjectName("editorHeader");
+    rightPanelLayout->addWidget(rightHeader);
     m_rightTextBrowser = new QDiffX::QDiffTextBrowser();
-    m_splitter->addWidget(m_leftTextBrowser);
-    m_splitter->addWidget(m_rightTextBrowser);
+    rightPanelLayout->addWidget(m_rightTextBrowser);
+
+    m_splitter->addWidget(leftPanel);
+    m_splitter->addWidget(rightPanel);
 
     mainLayout->addWidget(m_splitter);
+
+    // Bottom status bar
+    QHBoxLayout *bottomLayout = new QHBoxLayout();
+    m_addedLabel = new QLabel(tr("Added: 0"));
+    m_removedLabel = new QLabel(tr("Removed: 0"));
+    m_addedLabel->setObjectName("addedLabel");
+    m_removedLabel->setObjectName("removedLabel");
+    bottomLayout->addWidget(m_addedLabel);
+    bottomLayout->addSpacing(12);
+    bottomLayout->addWidget(m_removedLabel);
+    bottomLayout->addStretch();
+
+    if (m_showSyncToggle) {
+        m_syncScrollCheck = new QCheckBox(tr("Scroll Sync"));
+        connect(m_syncScrollCheck, &QCheckBox::toggled, this, &QDiffWidget::enableSyncScrolling);
+        bottomLayout->addWidget(m_syncScrollCheck);
+    }
+
+    mainLayout->addLayout(bottomLayout);
 }
 
 void QDiffWidget::updateDiff()
@@ -477,27 +509,39 @@ void QDiffWidget::setTheme(Theme theme)
     QString style;
     if (theme == Theme::Dark) {
         style = R"(
-            QWidget { background-color: #121212; color: #e6e6e6; }
-            QPushButton { background: qlineargradient(x1:0,y1:0,x2:0,y2:1, stop:0 #2b2b2b, stop:1 #1e1e1e); border: 1px solid #3a3a3a; padding:6px 10px; border-radius:6px; }
-            QPushButton:hover { border-color: #5a5a5a; }
-            QComboBox { background: #1f1f1f; color: #e6e6e6; border: 1px solid #333; padding:4px; }
+            QWidget { background-color: #121218; color: #e6e6e6; }
+            #editorHeader { font-weight:600; padding:10px 14px; color:#d7dde3; }
+            #editorPanel { background: qlineargradient(x1:0,y1:0,x2:0,y2:1, stop:0 #141416, stop:1 #0f1012); border-radius:10px; border:1px solid #232326; }
+            QLineNumberArea { background: #0f0f10; color: #8b95a1; }
+            QPushButton { background: qlineargradient(x1:0,y1:0,x2:0,y2:1, stop:0 #2b2b2b, stop:1 #1e1e1e); border: 1px solid #2f3136; padding:6px 10px; border-radius:8px; }
+            QPushButton:hover { border-color: #4a4d52; }
+            QComboBox { background: #171717; color: #e6e6e6; border: 1px solid #2b2b2b; padding:6px; border-radius:6px; }
             QCheckBox { color: #e6e6e6; }
-            QMenu { background-color: #1b1b1b; color: #e6e6e6; }
-            QTextBrowser { background-color: #0f0f0f; color: #e6e6e6; border: none; }
+            QMenu { background-color: #19191c; color: #e6e6e6; }
+            QTextBrowser { background-color: transparent; color: #d6e6ff; padding:12px; }
             QScrollBar:vertical { background: transparent; width:10px; }
-            QScrollBar::handle:vertical { background: #333; border-radius:5px; }
+            QScrollBar::handle:vertical { background: #2b2b2b; border-radius:5px; }
+            #addedLabel { color: #59c36a; font-weight:600; }
+            #removedLabel { color: #e07a7a; font-weight:600; }
+            QSplitter::handle { background: transparent; }
         )";
     } else {
         style = R"(
-            QWidget { background-color: #f7f9fb; color: #222222; }
-            QPushButton { background: qlineargradient(x1:0,y1:0,x2:0,y2:1, stop:0 #ffffff, stop:1 #f3f6fa); border: 1px solid #d6dce6; padding:6px 10px; border-radius:6px; }
-            QPushButton:hover { border-color: #8aa0c0; }
-            QComboBox { background: white; color: #222; border: 1px solid #d0d7e0; padding:4px; }
-            QCheckBox { color: #222; }
-            QMenu { background-color: #ffffff; color: #222; }
-            QTextBrowser { background-color: #ffffff; color: #222; border: none; }
+            QWidget { background-color: #fbfdff; color: #1c2430; }
+            #editorHeader { font-weight:600; padding:10px 14px; color:#1b2430; }
+            #editorPanel { background: qlineargradient(x1:0,y1:0,x2:0,y2:1, stop:0 #ffffff, stop:1 #fbfcff); border-radius:10px; border:1px solid #e6edf6; }
+            QLineNumberArea { background: #fff; color: #9aa3ad; }
+            QPushButton { background: qlineargradient(x1:0,y1:0,x2:0,y2:1, stop:0 #ffffff, stop:1 #f3f6fa); border: 1px solid #d6dce6; padding:6px 10px; border-radius:8px; }
+            QPushButton:hover { border-color: #b9c6d8; }
+            QComboBox { background: #ffffff; color: #1c2430; border: 1px solid #dbe7f2; padding:6px; border-radius:6px; }
+            QCheckBox { color: #1c2430; }
+            QMenu { background-color: #ffffff; color: #1c2430; }
+            QTextBrowser { background-color: transparent; color: #0f1720; padding:12px; }
             QScrollBar:vertical { background: transparent; width:10px; }
-            QScrollBar::handle:vertical { background: #cccccc; border-radius:5px; }
+            QScrollBar::handle:vertical { background: #d6dbe1; border-radius:5px; }
+            #addedLabel { color: #0ea44f; font-weight:600; }
+            #removedLabel { color: #d9483b; font-weight:600; }
+            QSplitter::handle { background: transparent; }
         )";
     }
 
@@ -564,6 +608,14 @@ void QDiffWidget::onDiffCalculated(const QDiffX::QDiffResult& result)
     
     if (result.success()) {
         displayUnifiedDiff(result);
+        // Update status counts
+        int added = 0, removed = 0;
+        for (const auto &c : result.changes()) {
+            if (c.operation == DiffOperation::Insert) ++added;
+            else if (c.operation == DiffOperation::Delete) ++removed;
+        }
+        if (m_addedLabel) m_addedLabel->setText(tr("Added: %1").arg(added));
+        if (m_removedLabel) m_removedLabel->setText(tr("Removed: %1").arg(removed));
     } else {
         // Fallback to plain text display on error
         m_leftTextBrowser->setPlainText(m_leftContent);
@@ -581,6 +633,16 @@ void QDiffWidget::onSideBySideDiffCalculated(const QDiffX::QSideBySideDiffResult
         displaySideBySideDiff(result);
         // Show both panels in side-by-side mode
         m_rightTextBrowser->show();
+        // Update status counts using both sides
+        int added = 0, removed = 0;
+        for (const auto &c : result.rightSide.changes()) {
+            if (c.operation == DiffOperation::Insert) ++added;
+        }
+        for (const auto &c : result.leftSide.changes()) {
+            if (c.operation == DiffOperation::Delete) ++removed;
+        }
+        if (m_addedLabel) m_addedLabel->setText(tr("Added: %1").arg(added));
+        if (m_removedLabel) m_removedLabel->setText(tr("Removed: %1").arg(removed));
     } else {
         // Fallback to plain text display on error
         m_leftTextBrowser->setPlainText(m_leftContent);

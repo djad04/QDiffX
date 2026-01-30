@@ -114,6 +114,8 @@ private:
     QComboBox* m_algorithmCombo = nullptr;
     QComboBox* m_displayModeCombo = nullptr;
     QCheckBox* m_syncScrollCheck = nullptr;
+    QLabel* m_addedLabel = nullptr;
+    QLabel* m_removedLabel = nullptr;
 
     // Visibility flags for controls (default: enabled)
     bool m_showThemeControls = true;
