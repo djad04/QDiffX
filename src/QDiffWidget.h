@@ -109,11 +109,13 @@ private:
     QSplitter *m_splitter;
     QDiffTextBrowser *m_leftTextBrowser;
     QDiffTextBrowser *m_rightTextBrowser;
+    QWidget* m_leftPanel = nullptr;
+    QWidget* m_rightPanel = nullptr;
 
     // Toolbar controls
     QPushButton* m_themeButton = nullptr;
-    QComboBox* m_algorithmCombo = nullptr;
-    QComboBox* m_displayModeCombo = nullptr;
+    QPushButton* m_algorithmButton = nullptr;
+    QPushButton* m_displayModeButton = nullptr;
     QCheckBox* m_syncScrollCheck = nullptr;
     QLabel* m_addedLabel = nullptr;
     QLabel* m_removedLabel = nullptr;
