@@ -1,218 +1,319 @@
 ![QDiffX Demo](assets/qdiffx_demo.svg)
-# QDiffX
-## The Diff Widget Qt Should Have Built
 
+### The Diff Widget Qt Should Have Built
 
-**QDiffX** is a plug-and-play **diff visualization widget for Qt applications**, designed to make content comparison effortless and native. Whether you're building a file manager, a version control GUI, a config editor, or an IDE QDiffX brings a clean, intuitive diff viewer directly into your Qt interface, no web views or external dependencies required.
+**QDiffX** is a lightweight, extensible **diff viewer widget for Qt**.  
+It is designed to be dropped into existing Qt applications without web views, heavy dependencies, or complex setup.
 
-**Finally.** A production-ready, drop-in diff visualization widget for Qt applications. Because handling file conflicts shouldn't require reinventing the wheel.
-
-
-## Why QDiffX Changes Everything
-
-**Qt developers have been waiting for this.** Every file manager, code editor, version control GUI, and configuration tool needs diff visualization. Until now, you had to build it from scratch or compromise with web-based solutions.
-
-**QDiffX ends that pain.**
+The project focuses on two core ideas:
+- A **clean, usable diff UI** (inline and side-by-side)
+- A **pluggable algorithm system** so diff logic stays flexible and replaceable
+- **Synchronous and asynchronous execution** for both responsive UIs and immediate results
 
 ---
 
-## Perfect For
+## What It Is
 
-* **📁 File Managers**  Show users exactly what changed when files conflict
-* **⚙️ Configuration Tools**  Let users merge settings intelligently
-* **🔧 Development IDEs** Built-in diff without external dependencies
-* **📊 Database GUIs** (Redis, MongoDB tools) - Compare configurations
-* **🏢 Business Tools** Solid diff widget in your Qt stack
+- A ready-to-use **Qt Widgets diff component**
+- Supports **side-by-side** and **inline** diff views
+- Built with **Qt Widgets** (Qt 5.15+ and Qt 6.x)
+- Written in **C++17**
+- Can be embedded or extended easily
+
+This is meant to be infrastructure something you don't have to rewrite for every Qt project.
 
 ---
 
-##  What Makes It Special
+## Typical Use Cases
 
+- File managers and sync tools  
+- IDEs and code editors  
+- Configuration and settings comparison  
+- Database and DevOps tools  
+- Any Qt application that needs to show "what changed"
+
+---
+
+## Quick Example
 ```cpp
-// Literally this simple
 #include "QDiffWidget.h"
 
-QDiffX::QDiffWidget* diff = new QDiffX::QDiffWidget();
-diff->setLeftContent(originalFile);
-diff->setRightContent(modifiedFile);
+auto* diff = new QDiffX::QDiffWidget(this);
+diff->setLeftContent(originalText);
+diff->setRightContent(modifiedText);
 layout->addWidget(diff);
-// Done. Ready to use.
-```
-Built with a pluggable algorithm architecture: write a bridge for your algorithm, register it, and integrate directly.
----
-
-
-##  The Problem It Solves
-
-Every Qt developer has faced this:
-
-* ❌ User opens a file that changed on disk
-* ❌ Application needs to show differences
-* ❌ No built-in Qt solution exists
-* ❌ Weeks spent building custom diff logic
-* ❌ Inconsistent UX across applications
-* ❌ Integration of heavy diffing algorithms like myers can be overkill sometimes and takes huge time and effort
-
-**QDiffX eliminates this entirely.**
-
-
-## 🛠️ Installation
-
-### Quick Start
-
-```bash
-git clone https://github.com/yourusername/QDiffX.git
-cmake -S QDiffX -B QDiffX/build
-cmake --build QDiffX/build
-# Run the demo app from the build output
 ```
 
-### CMake Integration (embed the widget)
-
-```cmake
-# Add QDiffX as a subproject
-add_subdirectory(QDiffX)
-
-# Add widget sources to your target and link core library
-target_sources(your_target PRIVATE
-    QDiffX/src/QDiffWidget.cpp
-    QDiffX/src/QDiffTextBrowser.cpp
-    QDiffX/src/QLineNumberArea.cpp
-)
-target_include_directories(your_target PRIVATE ${CMAKE_SOURCE_DIR}/QDiffX/src)
-target_link_libraries(your_target PRIVATE
-    QDiffXCore
-    Qt${QT_VERSION_MAJOR}::Core
-    Qt${QT_VERSION_MAJOR}::Widgets
-)
-```
-
-### qmake Integration
-
-Not supported yet (planned).
+That's it the widget handles rendering, scrolling, and highlighting.
 
 ---
 
-##  Use Cases That Work
-
-1. **File Sync Apps**  When Dropbox meets Qt
-2. **Configuration Managers**  Docker Compose, Kubernetes configs
-3. **Database Tools**  Redis config comparisons, SQL migrations
-4. **Game Development**  Asset version control, save file debugging
-5. **IoT Dashboards**  Device configuration drift detection
-
-### Basic Usage
-
-```cpp
-#include "QDiffWidget.h"
-
-// Create the widget
-auto* diffWidget = new QDiffX::QDiffWidget(this);
-
-// Set content to compare
-diffWidget->setLeftContent("Original content\nLine 2\nLine 3");
-diffWidget->setRightContent("Modified content\nLine 2 changed\nLine 3");
-
-// Add to your layout
-layout->addWidget(diffWidget);
-```
-
-### Display Modes
-
+## Display Modes
 ```cpp
 // Side-by-side (default)
-diffWidget->setDisplayMode(QDiffX::QDiffWidget::DisplayMode::SideBySide);
+diff->setDisplayMode(QDiffX::QDiffWidget::SideBySide);
 
 // Inline
-diffWidget->setDisplayMode(QDiffX::QDiffWidget::DisplayMode::Inline);
+diff->setDisplayMode(QDiffX::QDiffWidget::Inline);
 ```
 
-### Load From Files
+---
 
+## Algorithm Plugin System
+
+QDiffX cleanly separates diff visualization from diff algorithms.
+
+Algorithms are implemented as small, self-contained classes and registered with the system.
+
+### Why This Matters
+
+- Swap algorithms without touching UI code
+- Use simple algorithms for small files
+- Plug in advanced algorithms for large or structured content
+- Easy to experiment or customize behavior
+
+### Adding a New Algorithm
+
+1. Create a class that inherits from `QDiffX::QDiffAlgorithm`
+2. Implement:
+   - `calculateDiff(...)`
+   - `getName()`
+   - `getDescription()`
+3. Register it with the algorithm manager or registry
 ```cpp
-diffWidget->setContentFromFiles("/path/to/left.txt", "/path/to/right.txt");
+registry.registerAlgorithm(
+    std::make_shared<MyCustomDiffAlgorithm>()
+);
 ```
 
-### Algorithm Management
+Once registered, the algorithm appears in the UI automatically and can be selected at runtime.
 
+---
+
+## Algorithm Management
 ```cpp
-#include "QAlgorithmRegistry.h"
-#include "QAlgorithmManager.h"
-#include "DMPAlgorithm.h"
-
-// Register algorithm
-QDiffX::QAlgorithmRegistry::get_Instance().registerAlgorithm<QDiffX::DMPAlgorithm>("dmp");
-
-// Configure manager
-auto* manager = new QDiffX::QAlgorithmManager(diffWidget);
+auto* manager = new QDiffX::QAlgorithmManager(diff);
 manager->setSelectionMode(QDiffX::QAlgorithmSelectionMode::Auto);
-manager->setExecutionMode(QDiffX::QExecutionMode::Synchronous);
-diffWidget->setAlgorithmManager(manager);
-
-// Or manual selection
-manager->setSelectionMode(QDiffX::QAlgorithmSelectionMode::Manual);
-manager->setCurrentAlgorithm("dmp");
+diff->setAlgorithmManager(manager);
 ```
 
-### Supported Versions
+Manual selection is also supported if a specific algorithm is required.
 
-- Qt 5.15+ and Qt 6.x
-- C++17
+---
+
+### Algorithm Capabilities
+
+Each algorithm declares its capabilities:
+
+- Support for large files
+- Unicode and binary content support
+- Line-by-line, character-by-character, or word-by-word diffing
+- Maximum recommended file size
+- Performance complexity estimation
+
+The algorithm manager uses these capabilities for intelligent automatic selection.
+
+---
+
+## Execution Modes
+
+QDiffX supports both synchronous and asynchronous diff calculation.
+
+### Asynchronous Execution (Recommended)
+```cpp
+manager->setExecutionMode(QDiffX::QExecutionMode::Asynchronous);
+
+auto future = manager->calculateDiffAsync(leftText, rightText);
+// UI remains responsive while calculation runs in background
+```
+
+Connect to signals to receive results:
+```cpp
+connect(manager, &QDiffX::QAlgorithmManager::diffCalculated,
+        this, [](const QDiffX::QDiffResult& result) {
+    if (result.success()) {
+        // Use the result
+    }
+});
+```
+
+### Synchronous Execution
+```cpp
+manager->setExecutionMode(QDiffX::QExecutionMode::Synchronous);
+
+auto result = manager->calculateDiffSync(leftText, rightText);
+if (result.success()) {
+    // Process immediately
+}
+```
+
+---
+
+## Error Handling
+
+QDiffX provides comprehensive error handling through typed error codes and detailed error messages.
+
+### Error Types
+```cpp
+enum class QAlgorithmManagerError {
+    None,                      // No error
+    AlgorithmNotFound,         // Requested algorithm doesn't exist
+    AlgorithmCreationFailed,   // Failed to instantiate algorithm
+    InvalidAlgorithmId,        // Invalid algorithm identifier
+    DiffExecutionFailed,       // Algorithm execution failed
+    ConfigurationError,        // Invalid algorithm configuration
+    Timeout,                   // Operation exceeded time limit
+    OperationCancelled,        // User cancelled operation
+    Unknown                    // Unexpected error
+};
+```
+
+### Handling Errors
+```cpp
+auto result = manager->calculateDiffSync(leftText, rightText);
+
+if (!result.success()) {
+    QString error = result.errorMessage();
+    qWarning() << "Diff failed:" << error;
+    
+    // Check specific error type
+    auto errorType = manager->lastError();
+    if (errorType == QDiffX::QAlgorithmManagerError::AlgorithmNotFound) {
+        // Handle missing algorithm
+    }
+}
+```
+
+### Error Signals
+```cpp
+connect(manager, &QDiffX::QAlgorithmManager::errorOccurred,
+        this, [](QDiffX::QAlgorithmManagerError error, const QString& message) {
+    qCritical() << "Algorithm error:" << message;
+});
+```
+
+### Fallback Algorithm
+
+Configure a fallback algorithm for automatic recovery:
+```cpp
+manager->setCurrentAlgorithm("advanced-algorithm");
+manager->setFallBackAlgorithm("simple-algorithm");
+
+// If advanced-algorithm fails, simple-algorithm is automatically tried
+```
+
+---
+
+## Thread Safety
+
+QDiffX is designed with thread safety in mind:
+
+- Algorithm registry uses `QMutex` for concurrent access
+- Algorithm manager supports asynchronous execution via `QFuture`
+- Safe to call from multiple threads when using the registry
+- UI updates are handled on the main thread
+
+---
+
+## Algorithm Configuration
+
+Algorithms can be configured at runtime:
+```cpp
+// Get current configuration
+auto config = manager->getAlgorithmConfiguration("dmp");
+
+// Modify settings
+config["timeout"] = 5000;
+config["checklines"] = true;
+
+// Apply new configuration
+manager->setAlgorithmConfiguration("dmp", config);
+```
+
+Configuration changes emit signals for reactive updates:
+```cpp
+connect(manager, &QDiffX::QAlgorithmManager::algorithmConfigurationChanged,
+        this, [](const QString& algorithmId, const QMap<QString, QVariant>& config) {
+    qDebug() << "Algorithm" << algorithmId << "reconfigured";
+});
+```
+
+---
+
+## Side-by-Side Diff Results
+
+QDiffX provides specialized support for side-by-side diffs:
+```cpp
+auto sideBySideResult = manager->calculateSideBySideDiffSync(leftText, rightText);
+
+if (sideBySideResult.success()) {
+    // Left side contains Equal + Delete operations
+    auto leftChanges = sideBySideResult.leftSide.changes();
+    
+    // Right side contains Equal + Insert operations
+    auto rightChanges = sideBySideResult.rightSide.changes();
+    
+    // Algorithm used for calculation
+    QString algorithm = sideBySideResult.algorithmUsed;
+}
+```
+
+---
+
+## Metadata and Performance
+
+Diff results include metadata for analysis:
+```cpp
+auto result = manager->calculateDiffSync(leftText, rightText);
+
+// Access metadata
+auto metadata = result.allMetaData();
+int executionTime = metadata["executionTime"].toInt();
+QString algorithmUsed = metadata["algorithm"].toString();
+int changeCount = metadata["changeCount"].toInt();
+```
+---
+
+## Building
+```bash
+git clone https://github.com/yourusername/QDiffX.git
+cmake -S QDiffX -B build
+cmake --build build
+```
+
+A demo application is included to test the widget and available algorithms.
+
+---
 
 ## Contributing
 
-Join the movement and help make QDiffX even better:
+Contributions are welcome and should be small and focused.
 
-*  **Bug Reports**  Help us make it bulletproof
-*  **Feature Requests**  What's your dream diff widget?
-*  **Code Contributions**  Let's build the future of Qt together
-*  **Documentation**  Help others discover the power
+**Key points:**
+- Unit tests are required for new algorithms and logic changes
+- Tests run automatically in CI
+- Builds and tests run on Linux, Windows, and macOS
+- Failing tests block merges to protected branches
 
-- Pull requests automatically trigger cross‑platform builds and tests on Ubuntu, Windows, and macOS.
-- CI installs a compatible Qt version, configures CMake with `BUILD_TESTING=ON`, builds, and runs `ctest`.
-- Failing tests and build errors block merges to protected branches.
-- Static analysis (`cppcheck`, `clang-tidy`) runs on Linux and reports are uploaded as artifacts.
-- Release tags (`v*`) package build outputs per OS and publish them to GitHub Releases.
-- See workflow configuration in `.github/workflows/build.yml`.
+**If you add:**
+- A new algorithm → include tests
+- A bug fix → include a regression test
 
+This keeps the core stable and predictable.
 
-### How to Contribute
+---
 
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/X-feature`)
-3. Make your changes
-4. Commit your changes (`git commit -m 'Add X feature'`)
-5. Push to the branch (`git push origin feature/X-feature`)
-6. Open a Pull Request
+## Roadmap
 
+- Add More themes
+- Direct editing
+- Directory comparison
+- Three-way merge
+- Additional themes
+- Smarter automatic algorithm selection
 
-
-### Upcoming Features
-ideas that will be made in the future
-
-- [ ] **Inline Editing**  Edit differences directly in the widget
-- [ ] **Directory Comparison**  Compare entire folder structures
-- [ ] **Advanced Merge Tools**  Three-way merge support
-- [ ] **More themes**  
-- [ ] **Better UI with customizable buttons**  to handle different algorithms choice and inline / side-by-side directly from the widget 
-- [ ] **Smart algorithm choice learning system**  can be trained as it is used to always pick the best possible algorithm depending on the file size and structure 
-
+---
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-### Testing
-
-```bash
-cmake -S . -B build
-cmake --build build
-ctest --test-dir build --output-on-failure
-```
-
-
-
-
-
-
-**⭐ Star this repository if QDiffX solves your Qt diff headaches!**
+MIT License — see the [LICENSE](LICENSE) file for details.
