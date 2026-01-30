@@ -15,6 +15,13 @@
 
 namespace QDiffX {
 
+// Helper to interpret number of lines represented by a DiffChange::text
+static int countLinesInChangeText(const QString &text) {
+    // Count newline characters. If none, treat as single line.
+    int lines = text.count('\n');
+    return lines > 0 ? lines : 1;
+}
+
 
 QDiffWidget::QDiffWidget(QWidget *parent, const QString &leftLabelText, const QString &rightLabelText)
     : QWidget(parent),
@@ -611,8 +618,13 @@ void QDiffWidget::onDiffCalculated(const QDiffX::QDiffResult& result)
         // Update status counts
         int added = 0, removed = 0;
         for (const auto &c : result.changes()) {
-            if (c.operation == DiffOperation::Insert) ++added;
-            else if (c.operation == DiffOperation::Delete) ++removed;
+            int lines = countLinesInChangeText(c.text);
+            switch (c.operation) {
+                case DiffOperation::Insert: added += lines; break;
+                case DiffOperation::Delete: removed += lines; break;
+                case DiffOperation::Replace: added += lines; removed += lines; break;
+                default: break;
+            }
         }
         if (m_addedLabel) m_addedLabel->setText(tr("Added: %1").arg(added));
         if (m_removedLabel) m_removedLabel->setText(tr("Removed: %1").arg(removed));
@@ -636,10 +648,14 @@ void QDiffWidget::onSideBySideDiffCalculated(const QDiffX::QSideBySideDiffResult
         // Update status counts using both sides
         int added = 0, removed = 0;
         for (const auto &c : result.rightSide.changes()) {
-            if (c.operation == DiffOperation::Insert) ++added;
+            int lines = countLinesInChangeText(c.text);
+            if (c.operation == DiffOperation::Insert) added += lines;
+            if (c.operation == DiffOperation::Replace) added += lines; // defensive
         }
         for (const auto &c : result.leftSide.changes()) {
-            if (c.operation == DiffOperation::Delete) ++removed;
+            int lines = countLinesInChangeText(c.text);
+            if (c.operation == DiffOperation::Delete) removed += lines;
+            if (c.operation == DiffOperation::Replace) removed += lines; // defensive
         }
         if (m_addedLabel) m_addedLabel->setText(tr("Added: %1").arg(added));
         if (m_removedLabel) m_removedLabel->setText(tr("Removed: %1").arg(removed));
