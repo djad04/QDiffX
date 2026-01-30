@@ -66,6 +66,9 @@ void QDiffWidget::setupUI()
 
     // Toolbar with controls (theme, algorithm selector, display mode, sync)
     QHBoxLayout *toolbarLayout = new QHBoxLayout();
+    toolbarLayout->setAlignment(Qt::AlignVCenter);
+    toolbarLayout->setContentsMargins(6,6,6,6);
+    toolbarLayout->setSpacing(8);
 
     if (m_showThemeControls) {
         m_themeButton = new QPushButton(tr("Theme"));
@@ -75,6 +78,8 @@ void QDiffWidget::setupUI()
         connect(lightAction, &QAction::triggered, this, [this]() { setTheme(Theme::Light); });
         connect(darkAction, &QAction::triggered, this, [this]() { setTheme(Theme::Dark); });
         m_themeButton->setMenu(themeMenu);
+        m_themeButton->setMinimumHeight(18);
+        m_themeButton->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
         toolbarLayout->addWidget(m_themeButton);
     }
 
@@ -83,6 +88,8 @@ void QDiffWidget::setupUI()
         QMenu *algMenu = new QMenu(m_algorithmButton);
         m_algorithmButton->setMenu(algMenu);
         m_algorithmButton->setEnabled(false);
+        m_algorithmButton->setMinimumHeight(18);
+        m_algorithmButton->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
         toolbarLayout->addWidget(m_algorithmButton);
     }
 
@@ -96,6 +103,8 @@ void QDiffWidget::setupUI()
         connect(sideAction, &QAction::triggered, this, [this](){ setDisplayMode(DisplayMode::SideBySide); });
         connect(inlineAction, &QAction::triggered, this, [this](){ setDisplayMode(DisplayMode::Inline); });
         m_displayModeButton->setMenu(modeMenu);
+        m_displayModeButton->setMinimumHeight(18);
+        m_displayModeButton->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
         toolbarLayout->addWidget(m_displayModeButton);
     }
 
@@ -130,6 +139,9 @@ void QDiffWidget::setupUI()
     m_splitter->addWidget(rightPanel);
 
     mainLayout->addWidget(m_splitter);
+    // Ensure splitter (diff area) expands with window while toolbar/bottom remain stable
+    int splitterIndex = mainLayout->indexOf(m_splitter);
+    if (splitterIndex >= 0) mainLayout->setStretch(splitterIndex, 1);
 
     // Bottom status bar
     QHBoxLayout *bottomLayout = new QHBoxLayout();
@@ -525,8 +537,9 @@ void QDiffWidget::setTheme(Theme theme)
             #editorHeader { font-weight:600; padding:10px 14px; color:#d7dde3; }
             #editorPanel { background: qlineargradient(x1:0,y1:0,x2:0,y2:1, stop:0 #141416, stop:1 #0f1012); border-radius:10px; border:1px solid #232326; }
             QLineNumberArea { background: #0f0f10; color: #8b95a1; }
-            QPushButton { background: qlineargradient(x1:0,y1:0,x2:0,y2:1, stop:0 #2b2b2b, stop:1 #1e1e1e); border: 1px solid #2f3136; padding:6px 10px; border-radius:8px; }
+            QPushButton { background: qlineargradient(x1:0,y1:0,x2:0,y2:1, stop:0 #2b2b2b, stop:1 #1e1e1e); border: 1px solid #2f3136; padding:6px 12px; border-radius:8px; min-height:36px; }
             QPushButton:hover { border-color: #4a4d52; }
+            QPushButton::menu-indicator { subcontrol-origin: padding; subcontrol-position: right center; }
             QComboBox { background: #171717; color: #e6e6e6; border: 1px solid #2b2b2b; padding:6px; border-radius:6px; }
             QCheckBox { color: #e6e6e6; }
             QMenu { background-color: #19191c; color: #e6e6e6; }
@@ -543,8 +556,9 @@ void QDiffWidget::setTheme(Theme theme)
             #editorHeader { font-weight:600; padding:10px 14px; color:#1b2430; }
             #editorPanel { background: qlineargradient(x1:0,y1:0,x2:0,y2:1, stop:0 #ffffff, stop:1 #fbfcff); border-radius:10px; border:1px solid #e6edf6; }
             QLineNumberArea { background: #fff; color: #9aa3ad; }
-            QPushButton { background: qlineargradient(x1:0,y1:0,x2:0,y2:1, stop:0 #ffffff, stop:1 #f3f6fa); border: 1px solid #d6dce6; padding:6px 10px; border-radius:8px; }
+            QPushButton { background: qlineargradient(x1:0,y1:0,x2:0,y2:1, stop:0 #ffffff, stop:1 #f3f6fa); border: 1px solid #d6dce6; padding:6px 12px; border-radius:8px; min-height:36px; }
             QPushButton:hover { border-color: #b9c6d8; }
+            QPushButton::menu-indicator { subcontrol-origin: padding; subcontrol-position: right center; }
             QComboBox { background: #ffffff; color: #1c2430; border: 1px solid #dbe7f2; padding:6px; border-radius:6px; }
             QCheckBox { color: #1c2430; }
             QMenu { background-color: #ffffff; color: #1c2430; }
