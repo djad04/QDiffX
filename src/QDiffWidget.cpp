@@ -5,8 +5,22 @@
 #include <QFile>
 #include <QTextStream>
 #include <QFileInfo>
+#include <QPushButton>
+#include <QComboBox>
+#include <QCheckBox>
+#include <QMenu>
+#include <QAction>
+#include <QApplication>
+#include <QScrollBar>
 
 namespace QDiffX {
+
+// Helper to interpret number of lines represented by a DiffChange::text
+static int countLinesInChangeText(const QString &text) {
+    // Count newline characters. If none, treat as single line.
+    int lines = text.count('\n');
+    return lines > 0 ? lines : 1;
+}
 
 
 QDiffWidget::QDiffWidget(QWidget *parent, const QString &leftLabelText, const QString &rightLabelText)
@@ -16,10 +30,30 @@ QDiffWidget::QDiffWidget(QWidget *parent, const QString &leftLabelText, const QS
 {
     setupUI();
     setupConnections();
-    
+
     // Create and set up the algorithm manager
     m_algorithmManager = new QAlgorithmManager(this);
     connectAlgorithmManagerSignals();
+    // Populate algorithm menu when manager is available
+    if (m_algorithmButton) {
+        QMenu *algMenu = m_algorithmButton->menu();
+        if (algMenu) {
+            QStringList algs = m_algorithmManager->getAvailableAlgorithms();
+            algMenu->clear();
+            for (const QString &id : algs) {
+                QAction *a = algMenu->addAction(id);
+                connect(a, &QAction::triggered, this, [this, id]() {
+                    if (!m_algorithmManager) return;
+                    m_algorithmManager->setSelectionMode(QAlgorithmSelectionMode::Manual);
+                    m_algorithmManager->setCurrentAlgorithm(id);
+                    if (m_algorithmButton) m_algorithmButton->setText(id);
+                    updateDiff();
+                });
+            }
+            m_algorithmButton->setEnabled(!algs.isEmpty());
+            if (!algs.isEmpty()) m_algorithmButton->setText(algs.first());
+        }
+    }
 }
 
 QDiffWidget::~QDiffWidget() {}
@@ -28,20 +62,105 @@ void QDiffWidget::setupUI()
 {
     QVBoxLayout *mainLayout = new QVBoxLayout(this);
 
-    QHBoxLayout *headerLayout = new QHBoxLayout();
-    QLabel *leftLabel = new QLabel(m_leftLabel);
-    QLabel *rightLabel = new QLabel(m_rightLabel);
-    headerLayout->addWidget(leftLabel);
-    headerLayout->addWidget(rightLabel);
-    mainLayout->addLayout(headerLayout);
+    // (Top duplicate labels removed — headers are inside each editor panel)
 
+    // Toolbar with controls (theme, algorithm selector, display mode, sync)
+    QHBoxLayout *toolbarLayout = new QHBoxLayout();
+    toolbarLayout->setAlignment(Qt::AlignVCenter);
+    toolbarLayout->setContentsMargins(6,6,6,6);
+    toolbarLayout->setSpacing(8);
+
+    if (m_showThemeControls) {
+        m_themeButton = new QPushButton(tr("Theme"));
+        QMenu *themeMenu = new QMenu(m_themeButton);
+        QAction *lightAction = themeMenu->addAction(tr("Light"));
+        QAction *darkAction = themeMenu->addAction(tr("Dark"));
+        connect(lightAction, &QAction::triggered, this, [this]() { setTheme(Theme::Light); });
+        connect(darkAction, &QAction::triggered, this, [this]() { setTheme(Theme::Dark); });
+        m_themeButton->setMenu(themeMenu);
+        m_themeButton->setMinimumHeight(18);
+        m_themeButton->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
+        toolbarLayout->addWidget(m_themeButton);
+    }
+
+    if (m_showAlgorithmSelector) {
+        m_algorithmButton = new QPushButton(tr("Algorithm"));
+        QMenu *algMenu = new QMenu(m_algorithmButton);
+        m_algorithmButton->setMenu(algMenu);
+        m_algorithmButton->setEnabled(false);
+        m_algorithmButton->setMinimumHeight(18);
+        m_algorithmButton->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
+        toolbarLayout->addWidget(m_algorithmButton);
+    }
+
+    toolbarLayout->addStretch();
+
+    if (m_showDisplayModeButtons) {
+        m_displayModeButton = new QPushButton(tr("Display"));
+        QMenu *modeMenu = new QMenu(m_displayModeButton);
+        QAction *sideAction = modeMenu->addAction(tr("Side by Side"));
+        QAction *inlineAction = modeMenu->addAction(tr("Inline"));
+        connect(sideAction, &QAction::triggered, this, [this](){ setDisplayMode(DisplayMode::SideBySide); });
+        connect(inlineAction, &QAction::triggered, this, [this](){ setDisplayMode(DisplayMode::Inline); });
+        m_displayModeButton->setMenu(modeMenu);
+        m_displayModeButton->setMinimumHeight(18);
+        m_displayModeButton->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
+        toolbarLayout->addWidget(m_displayModeButton);
+    }
+
+    // (Sync checkbox will be in the bottom status bar for a cleaner layout)
+
+    mainLayout->addLayout(toolbarLayout);
+
+    // Main splitter and editor panels
     m_splitter = new QSplitter(Qt::Horizontal);
+
+    QWidget *leftPanel = new QWidget();
+    leftPanel->setObjectName("editorPanel");
+    QVBoxLayout *leftPanelLayout = new QVBoxLayout(leftPanel);
+    QLabel *leftHeader = new QLabel(m_leftLabel);
+    leftHeader->setObjectName("editorHeader");
+    leftPanelLayout->addWidget(leftHeader);
     m_leftTextBrowser = new QDiffX::QDiffTextBrowser();
+    leftPanelLayout->addWidget(m_leftTextBrowser);
+    m_leftPanel = leftPanel;
+
+    QWidget *rightPanel = new QWidget();
+    rightPanel->setObjectName("editorPanel");
+    QVBoxLayout *rightPanelLayout = new QVBoxLayout(rightPanel);
+    QLabel *rightHeader = new QLabel(m_rightLabel);
+    rightHeader->setObjectName("editorHeader");
+    rightPanelLayout->addWidget(rightHeader);
     m_rightTextBrowser = new QDiffX::QDiffTextBrowser();
-    m_splitter->addWidget(m_leftTextBrowser);
-    m_splitter->addWidget(m_rightTextBrowser);
+    rightPanelLayout->addWidget(m_rightTextBrowser);
+    m_rightPanel = rightPanel;
+
+    m_splitter->addWidget(leftPanel);
+    m_splitter->addWidget(rightPanel);
 
     mainLayout->addWidget(m_splitter);
+    // Ensure splitter (diff area) expands with window while toolbar/bottom remain stable
+    int splitterIndex = mainLayout->indexOf(m_splitter);
+    if (splitterIndex >= 0) mainLayout->setStretch(splitterIndex, 1);
+
+    // Bottom status bar
+    QHBoxLayout *bottomLayout = new QHBoxLayout();
+    m_addedLabel = new QLabel(tr("Added: 0"));
+    m_removedLabel = new QLabel(tr("Removed: 0"));
+    m_addedLabel->setObjectName("addedLabel");
+    m_removedLabel->setObjectName("removedLabel");
+    bottomLayout->addWidget(m_addedLabel);
+    bottomLayout->addSpacing(12);
+    bottomLayout->addWidget(m_removedLabel);
+    bottomLayout->addStretch();
+
+    if (m_showSyncToggle) {
+        m_syncScrollCheck = new QCheckBox(tr("Scroll Sync"));
+        connect(m_syncScrollCheck, &QCheckBox::toggled, this, &QDiffWidget::enableSyncScrolling);
+        bottomLayout->addWidget(m_syncScrollCheck);
+    }
+
+    mainLayout->addLayout(bottomLayout);
 }
 
 void QDiffWidget::updateDiff()
@@ -59,16 +178,27 @@ void QDiffWidget::updateDiff()
         return;
     }
     
+    QString algorithmId;
+    QAlgorithmSelectionMode selMode = QAlgorithmSelectionMode::Auto;
+    if (m_algorithmManager) {
+        selMode = m_algorithmManager->selectionMode();
+        algorithmId = m_algorithmManager->currentAlgorithm();
+    }
+
     if (m_displayMode == DisplayMode::SideBySide) {
-        // Calculate side-by-side diff asynchronously
-        m_algorithmManager->calculateSideBySideDiffAsync(m_leftContent, m_rightContent);
+        // Calculate side-by-side diff asynchronously, passing selection mode and algorithm id
+        m_algorithmManager->calculateSideBySideDiffAsync(m_leftContent, m_rightContent, selMode, algorithmId);
         // Result will be handled by onSideBySideDiffCalculated slot
     } else {
         // Calculate unified diff for inline mode asynchronously
-        m_algorithmManager->calculateDiffAsync(m_leftContent, m_rightContent);
+        m_algorithmManager->calculateDiffAsync(m_leftContent, m_rightContent, selMode, algorithmId);
         // Result will be handled by onDiffCalculated slot
-        // Hide right panel in inline mode
-        m_rightTextBrowser->hide();
+        // Hide right panel in inline mode so left editor takes full width
+        if (m_rightPanel) m_rightPanel->hide();
+        if (m_leftPanel && m_splitter) {
+            m_splitter->setStretchFactor(0, 1);
+            m_splitter->setStretchFactor(1, 0);
+        }
     }
 }
 
@@ -308,13 +438,14 @@ void QDiffWidget::setDisplayMode(DisplayMode mode)
     }
     
     m_displayMode = mode;
-    
     if (mode == DisplayMode::SideBySide) {
-        m_rightTextBrowser->show();
+        if (m_rightPanel) m_rightPanel->show();
+        if (m_splitter) { m_splitter->setStretchFactor(0,1); m_splitter->setStretchFactor(1,1); }
     } else {
-        m_rightTextBrowser->hide();
+        if (m_rightPanel) m_rightPanel->hide();
+        if (m_splitter) { m_splitter->setStretchFactor(0,1); m_splitter->setStretchFactor(1,0); }
     }
-    
+
     updateDiff(); // Refresh display with new mode
 }
 
@@ -335,6 +466,113 @@ void QDiffWidget::setAlgorithmManager(QAlgorithmManager* manager)
     }
     
     updateDiff(); // Refresh diff with new manager
+}
+
+// UI control visibility setters
+void QDiffWidget::setShowThemeControls(bool show)
+{
+    m_showThemeControls = show;
+    if (m_themeButton) m_themeButton->setVisible(show);
+}
+
+void QDiffWidget::setShowAlgorithmSelector(bool show)
+{
+    m_showAlgorithmSelector = show;
+    if (m_algorithmButton) m_algorithmButton->setVisible(show);
+}
+
+void QDiffWidget::setShowDisplayModeButtons(bool show)
+{
+    m_showDisplayModeButtons = show;
+    if (m_displayModeButton) m_displayModeButton->setVisible(show);
+}
+
+void QDiffWidget::setShowSyncToggle(bool show)
+{
+    m_showSyncToggle = show;
+    if (m_syncScrollCheck) m_syncScrollCheck->setVisible(show);
+}
+
+// Sync scrolling implementation
+void QDiffWidget::enableSyncScrolling(bool enable)
+{
+    if (enable) {
+        if (m_leftTextBrowser && m_rightTextBrowser) {
+            // Connect left -> right
+            m_leftScrollConn = connect(m_leftTextBrowser->verticalScrollBar(), &QScrollBar::valueChanged,
+                                       this, [this](int v){
+                if (m_syncingScroll) return;
+                m_syncingScroll = true;
+                m_rightTextBrowser->verticalScrollBar()->setValue(v);
+                m_syncingScroll = false;
+            });
+
+            // Connect right -> left
+            m_rightScrollConn = connect(m_rightTextBrowser->verticalScrollBar(), &QScrollBar::valueChanged,
+                                        this, [this](int v){
+                if (m_syncingScroll) return;
+                m_syncingScroll = true;
+                m_leftTextBrowser->verticalScrollBar()->setValue(v);
+                m_syncingScroll = false;
+            });
+        }
+    } else {
+        if (m_leftTextBrowser && m_rightTextBrowser) {
+            QObject::disconnect(m_leftScrollConn);
+            QObject::disconnect(m_rightScrollConn);
+        }
+    }
+}
+
+// Theme application
+void QDiffWidget::setTheme(Theme theme)
+{
+    m_theme = theme;
+
+    // Build a global stylesheet for the whole application/window
+    QString style;
+    if (theme == Theme::Dark) {
+        style = R"(
+            QWidget { background-color: #121218; color: #e6e6e6; }
+            #editorHeader { font-weight:600; padding:10px 14px; color:#d7dde3; }
+            #editorPanel { background: qlineargradient(x1:0,y1:0,x2:0,y2:1, stop:0 #141416, stop:1 #0f1012); border-radius:10px; border:1px solid #232326; }
+            QLineNumberArea { background: #0f0f10; color: #8b95a1; }
+            QPushButton { background: qlineargradient(x1:0,y1:0,x2:0,y2:1, stop:0 #2b2b2b, stop:1 #1e1e1e); border: 1px solid #2f3136; padding:6px 12px; border-radius:8px; min-height:36px; }
+            QPushButton:hover { border-color: #4a4d52; }
+            QPushButton::menu-indicator { subcontrol-origin: padding; subcontrol-position: right center; }
+            QComboBox { background: #171717; color: #e6e6e6; border: 1px solid #2b2b2b; padding:6px; border-radius:6px; }
+            QCheckBox { color: #e6e6e6; }
+            QMenu { background-color: #19191c; color: #e6e6e6; }
+            QTextBrowser { background-color: transparent; color: #d6e6ff; padding:12px; }
+            QScrollBar:vertical { background: transparent; width:10px; }
+            QScrollBar::handle:vertical { background: #2b2b2b; border-radius:5px; }
+            #addedLabel { color: #59c36a; font-weight:600; }
+            #removedLabel { color: #e07a7a; font-weight:600; }
+            QSplitter::handle { background: transparent; }
+        )";
+    } else {
+        style = R"(
+            QWidget { background-color: #fbfdff; color: #1c2430; }
+            #editorHeader { font-weight:600; padding:10px 14px; color:#1b2430; }
+            #editorPanel { background: qlineargradient(x1:0,y1:0,x2:0,y2:1, stop:0 #ffffff, stop:1 #fbfcff); border-radius:10px; border:1px solid #e6edf6; }
+            QLineNumberArea { background: #fff; color: #9aa3ad; }
+            QPushButton { background: qlineargradient(x1:0,y1:0,x2:0,y2:1, stop:0 #ffffff, stop:1 #f3f6fa); border: 1px solid #d6dce6; padding:6px 12px; border-radius:8px; min-height:36px; }
+            QPushButton:hover { border-color: #b9c6d8; }
+            QPushButton::menu-indicator { subcontrol-origin: padding; subcontrol-position: right center; }
+            QComboBox { background: #ffffff; color: #1c2430; border: 1px solid #dbe7f2; padding:6px; border-radius:6px; }
+            QCheckBox { color: #1c2430; }
+            QMenu { background-color: #ffffff; color: #1c2430; }
+            QTextBrowser { background-color: transparent; color: #0f1720; padding:12px; }
+            QScrollBar:vertical { background: transparent; width:10px; }
+            QScrollBar::handle:vertical { background: #d6dbe1; border-radius:5px; }
+            #addedLabel { color: #0ea44f; font-weight:600; }
+            #removedLabel { color: #d9483b; font-weight:600; }
+            QSplitter::handle { background: transparent; }
+        )";
+    }
+
+    // Apply globally to the application so the whole window changes
+    qApp->setStyleSheet(style);
 }
 
 QAlgorithmManager* QDiffWidget::algorithmManager() const
@@ -363,6 +601,29 @@ void QDiffWidget::connectAlgorithmManagerSignals()
             this, &QDiffWidget::onDiffCalculated);
     connect(m_algorithmManager, &QAlgorithmManager::sideBySideDiffCalculated,
             this, &QDiffWidget::onSideBySideDiffCalculated);
+    connect(m_algorithmManager, &QAlgorithmManager::availableAlgorithmsChanged, this, [this](const QStringList &list){
+        if (!m_algorithmButton) return;
+        QMenu *menu = m_algorithmButton->menu();
+        if (!menu) return;
+        menu->clear();
+        for (const QString &id : list) {
+            QAction *a = menu->addAction(id);
+            connect(a, &QAction::triggered, this, [this, id]() {
+                if (!m_algorithmManager) return;
+                m_algorithmManager->setSelectionMode(QAlgorithmSelectionMode::Manual);
+                m_algorithmManager->setCurrentAlgorithm(id);
+                if (m_algorithmButton) m_algorithmButton->setText(id);
+                updateDiff();
+            });
+        }
+        m_algorithmButton->setEnabled(!list.isEmpty());
+        if (!list.isEmpty()) m_algorithmButton->setText(list.first());
+    });
+    connect(m_algorithmManager, &QAlgorithmManager::currentAlgorithmChanged, this, [this](){
+        if (!m_algorithmButton) return;
+        QString cur = m_algorithmManager->currentAlgorithm();
+        if (!cur.isEmpty()) m_algorithmButton->setText(cur);
+    });
 }
 
 void QDiffWidget::disconnectAlgorithmManagerSignals()
@@ -384,6 +645,19 @@ void QDiffWidget::onDiffCalculated(const QDiffX::QDiffResult& result)
     
     if (result.success()) {
         displayUnifiedDiff(result);
+        // Update status counts
+        int added = 0, removed = 0;
+        for (const auto &c : result.changes()) {
+            int lines = countLinesInChangeText(c.text);
+            switch (c.operation) {
+                case DiffOperation::Insert: added += lines; break;
+                case DiffOperation::Delete: removed += lines; break;
+                case DiffOperation::Replace: added += lines; removed += lines; break;
+                default: break;
+            }
+        }
+        if (m_addedLabel) m_addedLabel->setText(tr("Added: %1").arg(added));
+        if (m_removedLabel) m_removedLabel->setText(tr("Removed: %1").arg(removed));
     } else {
         // Fallback to plain text display on error
         m_leftTextBrowser->setPlainText(m_leftContent);
@@ -400,7 +674,25 @@ void QDiffWidget::onSideBySideDiffCalculated(const QDiffX::QSideBySideDiffResult
     if (result.success()) {
         displaySideBySideDiff(result);
         // Show both panels in side-by-side mode
-        m_rightTextBrowser->show();
+        if (m_rightPanel) m_rightPanel->show();
+        if (m_splitter) {
+            m_splitter->setStretchFactor(0,1);
+            m_splitter->setStretchFactor(1,1);
+        }
+        // Update status counts using both sides
+        int added = 0, removed = 0;
+        for (const auto &c : result.rightSide.changes()) {
+            int lines = countLinesInChangeText(c.text);
+            if (c.operation == DiffOperation::Insert) added += lines;
+            if (c.operation == DiffOperation::Replace) added += lines; // defensive
+        }
+        for (const auto &c : result.leftSide.changes()) {
+            int lines = countLinesInChangeText(c.text);
+            if (c.operation == DiffOperation::Delete) removed += lines;
+            if (c.operation == DiffOperation::Replace) removed += lines; // defensive
+        }
+        if (m_addedLabel) m_addedLabel->setText(tr("Added: %1").arg(added));
+        if (m_removedLabel) m_removedLabel->setText(tr("Removed: %1").arg(removed));
     } else {
         // Fallback to plain text display on error
         m_leftTextBrowser->setPlainText(m_leftContent);

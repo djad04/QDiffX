@@ -5,6 +5,11 @@
 #include <QDiffTextBrowser.h>
 #include <QWidget>
 #include "QAlgorithmManager.h"
+#include <QLabel>
+#include <QPushButton>
+#include <QComboBox>
+#include <QCheckBox>
+#include <QMenu>
 
 namespace QDiffX {
 
@@ -30,6 +35,11 @@ public:
                 const QString &leftLabelText = "Original",
                 const QString &rightLabelText = "Modified");
     ~QDiffWidget();
+
+    enum class Theme {
+        Light,
+        Dark
+    };
 
     // Content Setting :
     void setLeftContent(const QString &leftContent);
@@ -68,6 +78,16 @@ public:
     void resetRightContent();
     void resetAll();
 
+    // UI control visibility (can be turned off in code)
+    void setShowThemeControls(bool show);
+    void setShowAlgorithmSelector(bool show);
+    void setShowDisplayModeButtons(bool show);
+    void setShowSyncToggle(bool show);
+
+    // Sync scrolling and theme
+    void enableSyncScrolling(bool enable);
+    void setTheme(Theme theme);
+
 signals:
     void contentChanged();
 
@@ -89,6 +109,29 @@ private:
     QSplitter *m_splitter;
     QDiffTextBrowser *m_leftTextBrowser;
     QDiffTextBrowser *m_rightTextBrowser;
+    QWidget* m_leftPanel = nullptr;
+    QWidget* m_rightPanel = nullptr;
+
+    // Toolbar controls
+    QPushButton* m_themeButton = nullptr;
+    QPushButton* m_algorithmButton = nullptr;
+    QPushButton* m_displayModeButton = nullptr;
+    QCheckBox* m_syncScrollCheck = nullptr;
+    QLabel* m_addedLabel = nullptr;
+    QLabel* m_removedLabel = nullptr;
+
+    // Visibility flags for controls (default: enabled)
+    bool m_showThemeControls = true;
+    bool m_showAlgorithmSelector = true;
+    bool m_showDisplayModeButtons = true;
+    bool m_showSyncToggle = true;
+
+    // Sync scroll helpers
+    bool m_syncingScroll = false;
+    QMetaObject::Connection m_leftScrollConn;
+    QMetaObject::Connection m_rightScrollConn;
+
+    Theme m_theme = Theme::Light;
 
     QString m_leftContent;
     QString m_rightContent;
