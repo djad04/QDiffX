@@ -5,6 +5,13 @@
 #include <QFile>
 #include <QTextStream>
 #include <QFileInfo>
+#include <QPushButton>
+#include <QComboBox>
+#include <QCheckBox>
+#include <QMenu>
+#include <QAction>
+#include <QApplication>
+#include <QScrollBar>
 
 namespace QDiffX {
 
@@ -16,10 +23,16 @@ QDiffWidget::QDiffWidget(QWidget *parent, const QString &leftLabelText, const QS
 {
     setupUI();
     setupConnections();
-    
+
     // Create and set up the algorithm manager
     m_algorithmManager = new QAlgorithmManager(this);
     connectAlgorithmManagerSignals();
+    // Populate algorithm combo when manager is available
+    if (m_algorithmCombo) {
+        QStringList algs = m_algorithmManager->getAvailableAlgorithms();
+        m_algorithmCombo->addItems(algs);
+        m_algorithmCombo->setEnabled(!algs.isEmpty());
+    }
 }
 
 QDiffWidget::~QDiffWidget() {}
@@ -28,13 +41,65 @@ void QDiffWidget::setupUI()
 {
     QVBoxLayout *mainLayout = new QVBoxLayout(this);
 
+    // Top header (labels)
     QHBoxLayout *headerLayout = new QHBoxLayout();
     QLabel *leftLabel = new QLabel(m_leftLabel);
     QLabel *rightLabel = new QLabel(m_rightLabel);
     headerLayout->addWidget(leftLabel);
+    headerLayout->addStretch();
     headerLayout->addWidget(rightLabel);
     mainLayout->addLayout(headerLayout);
 
+    // Toolbar with controls (theme, algorithm selector, display mode, sync)
+    QHBoxLayout *toolbarLayout = new QHBoxLayout();
+
+    if (m_showThemeControls) {
+        m_themeButton = new QPushButton(tr("Theme"));
+        QMenu *themeMenu = new QMenu(m_themeButton);
+        QAction *lightAction = themeMenu->addAction(tr("Light"));
+        QAction *darkAction = themeMenu->addAction(tr("Dark"));
+        connect(lightAction, &QAction::triggered, this, [this]() { setTheme(Theme::Light); });
+        connect(darkAction, &QAction::triggered, this, [this]() { setTheme(Theme::Dark); });
+        m_themeButton->setMenu(themeMenu);
+        toolbarLayout->addWidget(m_themeButton);
+    }
+
+    if (m_showAlgorithmSelector) {
+        m_algorithmCombo = new QComboBox();
+        m_algorithmCombo->setSizeAdjustPolicy(QComboBox::AdjustToContents);
+        m_algorithmCombo->setEditable(false);
+        m_algorithmCombo->setToolTip(tr("Select algorithm (scroll to change)"));
+        m_algorithmCombo->setMinimumWidth(180);
+        m_algorithmCombo->setEnabled(false); // enabled when manager provides list
+        connect(m_algorithmCombo, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this](int idx){
+            if (!m_algorithmManager || idx < 0) return;
+            QString id = m_algorithmCombo->itemText(idx);
+            m_algorithmManager->setCurrentAlgorithm(id);
+            updateDiff();
+        });
+        toolbarLayout->addWidget(m_algorithmCombo);
+    }
+
+    toolbarLayout->addStretch();
+
+    if (m_showDisplayModeButtons) {
+        m_displayModeButton = new QPushButton(tr("Toggle Inline/Side"));
+        connect(m_displayModeButton, &QPushButton::clicked, this, [this]() {
+            if (m_displayMode == DisplayMode::SideBySide) setDisplayMode(DisplayMode::Inline);
+            else setDisplayMode(DisplayMode::SideBySide);
+        });
+        toolbarLayout->addWidget(m_displayModeButton);
+    }
+
+    if (m_showSyncToggle) {
+        m_syncScrollCheck = new QCheckBox(tr("Sync Scroll"));
+        connect(m_syncScrollCheck, &QCheckBox::toggled, this, &QDiffWidget::enableSyncScrolling);
+        toolbarLayout->addWidget(m_syncScrollCheck);
+    }
+
+    mainLayout->addLayout(toolbarLayout);
+
+    // Main splitter and text browsers
     m_splitter = new QSplitter(Qt::Horizontal);
     m_leftTextBrowser = new QDiffX::QDiffTextBrowser();
     m_rightTextBrowser = new QDiffX::QDiffTextBrowser();
@@ -337,6 +402,79 @@ void QDiffWidget::setAlgorithmManager(QAlgorithmManager* manager)
     updateDiff(); // Refresh diff with new manager
 }
 
+// UI control visibility setters
+void QDiffWidget::setShowThemeControls(bool show)
+{
+    m_showThemeControls = show;
+    if (m_themeButton) m_themeButton->setVisible(show);
+}
+
+void QDiffWidget::setShowAlgorithmSelector(bool show)
+{
+    m_showAlgorithmSelector = show;
+    if (m_algorithmCombo) m_algorithmCombo->setVisible(show);
+}
+
+void QDiffWidget::setShowDisplayModeButtons(bool show)
+{
+    m_showDisplayModeButtons = show;
+    if (m_displayModeButton) m_displayModeButton->setVisible(show);
+}
+
+void QDiffWidget::setShowSyncToggle(bool show)
+{
+    m_showSyncToggle = show;
+    if (m_syncScrollCheck) m_syncScrollCheck->setVisible(show);
+}
+
+// Sync scrolling implementation
+void QDiffWidget::enableSyncScrolling(bool enable)
+{
+    if (enable) {
+        if (m_leftTextBrowser && m_rightTextBrowser) {
+            // Connect left -> right
+            m_leftScrollConn = connect(m_leftTextBrowser->verticalScrollBar(), &QScrollBar::valueChanged,
+                                       this, [this](int v){
+                if (m_syncingScroll) return;
+                m_syncingScroll = true;
+                m_rightTextBrowser->verticalScrollBar()->setValue(v);
+                m_syncingScroll = false;
+            });
+
+            // Connect right -> left
+            m_rightScrollConn = connect(m_rightTextBrowser->verticalScrollBar(), &QScrollBar::valueChanged,
+                                        this, [this](int v){
+                if (m_syncingScroll) return;
+                m_syncingScroll = true;
+                m_leftTextBrowser->verticalScrollBar()->setValue(v);
+                m_syncingScroll = false;
+            });
+        }
+    } else {
+        if (m_leftTextBrowser && m_rightTextBrowser) {
+            QObject::disconnect(m_leftScrollConn);
+            QObject::disconnect(m_rightScrollConn);
+        }
+    }
+}
+
+// Theme application
+void QDiffWidget::setTheme(Theme theme)
+{
+    m_theme = theme;
+    QString leftStyle, rightStyle;
+    if (theme == Theme::Dark) {
+        leftStyle = "QTextBrowser { background-color: #1e1e1e; color: #dcdcdc; }";
+        rightStyle = leftStyle;
+    } else {
+        leftStyle = "QTextBrowser { background-color: white; color: black; }";
+        rightStyle = leftStyle;
+    }
+
+    if (m_leftTextBrowser) m_leftTextBrowser->setStyleSheet(leftStyle);
+    if (m_rightTextBrowser) m_rightTextBrowser->setStyleSheet(rightStyle);
+}
+
 QAlgorithmManager* QDiffWidget::algorithmManager() const
 {
     return m_algorithmManager;
@@ -363,6 +501,18 @@ void QDiffWidget::connectAlgorithmManagerSignals()
             this, &QDiffWidget::onDiffCalculated);
     connect(m_algorithmManager, &QAlgorithmManager::sideBySideDiffCalculated,
             this, &QDiffWidget::onSideBySideDiffCalculated);
+    connect(m_algorithmManager, &QAlgorithmManager::availableAlgorithmsChanged, this, [this](const QStringList &list){
+        if (!m_algorithmCombo) return;
+        m_algorithmCombo->clear();
+        m_algorithmCombo->addItems(list);
+        m_algorithmCombo->setEnabled(!list.isEmpty());
+    });
+    connect(m_algorithmManager, &QAlgorithmManager::currentAlgorithmChanged, this, [this](){
+        if (!m_algorithmCombo) return;
+        QString cur = m_algorithmManager->currentAlgorithm();
+        int idx = m_algorithmCombo->findText(cur);
+        if (idx >= 0) m_algorithmCombo->setCurrentIndex(idx);
+    });
 }
 
 void QDiffWidget::disconnectAlgorithmManagerSignals()
