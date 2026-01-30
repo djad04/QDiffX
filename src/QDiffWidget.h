@@ -5,6 +5,7 @@
 #include <QDiffTextBrowser.h>
 #include <QWidget>
 #include "QAlgorithmManager.h"
+#include <QLabel>
 #include <QPushButton>
 #include <QComboBox>
 #include <QCheckBox>
